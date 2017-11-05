@@ -1,0 +1,94 @@
+#!/usr/bin/env ruby
+
+require 'sequel'
+require 'progressbar'
+
+DB = Sequel.postgres(username: 'postgres')
+
+def main
+  delete_any_existing_tables
+  create_tables
+
+  load_people
+  load_votes
+end
+
+def delete_any_existing_tables
+  DB.drop_table?(:vote_events, :votes, :people)
+end
+
+def create_tables
+  DB.create_table :people do
+    String :id, primary_key: true, null: false
+    String :name
+    String :party
+  end
+
+  DB.create_table :votes do
+    primary_key :id
+    String :policy_title
+    String :text
+    String :actions_yes
+    String :actions_no
+    Date :date
+  end
+
+  DB.create_table :vote_events do
+    String :option, null: false
+    foreign_key :person_id, :people, type: String, null: false
+    foreign_key :vote_id, :votes, null: false
+  end
+end
+
+def load_people
+  data = JSON.load(File.new('data/people.json'))['persons'].map do |p|
+    if p['redirect']
+      # This person will be picked up when get to redirect.
+      nil
+    else
+      p_name = p['other_names'].select { |fields| fields['note'] == 'Main' }.first
+
+      name = [
+        p_name['given_name'],
+        p_name['family_name']
+      ].join(' ')
+
+      party = (p['shortcuts'] || {})['current_party']
+
+      [p['id'], name, party]
+    end
+  end.reject(&:nil?)
+
+  DB[:people].import([:id, :name, :party], data)
+end
+
+def load_votes
+  vote_events_data = JSON.load(File.new('data/policies.json')).flat_map do |p|
+    policy_title = p['title']
+
+    p['aspects'].flat_map do |a|
+      motion = a['motion']
+      actions = motion['actions'] || {}
+      date = Date.strptime(motion['date'])
+
+      vote_id = DB[:votes].insert({
+        policy_title: policy_title,
+        text: motion['text'],
+        actions_yes: actions['yes'],
+        actions_no: actions['no'],
+        date: date,
+      })
+
+      vote_events = motion['vote_events']
+      raise if vote_events.length > 1
+
+      vote_events.first['votes'].map do |vote|
+        [vote['option'], vote['id'], vote_id]
+      end
+    end
+  end
+
+  DB[:vote_events].import([:option, :person_id, :vote_id], vote_events_data)
+end
+
+main
