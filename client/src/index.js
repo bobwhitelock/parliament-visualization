@@ -3,20 +3,19 @@ import * as d3 from 'd3';
 import './main.css';
 import {Main} from './Main.elm';
 
-Main.embed(document.getElementById('root'));
+const app = Main.embed(document.getElementById('root'));
 
 const width = 1000;
 const height = 800;
 
-// Locations to move bubbles towards, depending
-// on which view mode is selected.
-
 const center = {x: width / 2, y: height / 2};
 
-const yearCenters = {
-  2008: {x: width / 3, y: height / 2},
-  2009: {x: width / 2, y: height / 2},
-  2010: {x: 2 * width / 3, y: height / 2},
+const absent_or_both_position = {x: width / 2, y: height / 2};
+const positions = {
+  yes: {x: width / 3, y: height / 2},
+  absent: absent_or_both_position,
+  both: absent_or_both_position,
+  no: {x: 2 * width / 3, y: height / 2},
 };
 
 const forceStrength = 0.03;
@@ -47,7 +46,7 @@ const bubbleChart = (() => {
       d3
         .forceX()
         .strength(forceStrength)
-        .x(nodeYearPos),
+        .x(optionPosition),
     )
     .force(
       'y',
@@ -63,14 +62,13 @@ const bubbleChart = (() => {
   // any nodes yet.
   simulation.stop();
 
-  const fillColor = () => 'red';
-
   function createNodes(rawData) {
     const myNodes = rawData.map(function(d) {
       return {
         id: d.id,
         radius: 10,
-        year: d.start_year,
+        colour: d.partyColour,
+        option: d.option,
         x: Math.random() * 900,
         y: Math.random() * 800,
       };
@@ -102,10 +100,10 @@ const bubbleChart = (() => {
       .classed('bubble', true)
       .attr('r', 0)
       .attr('fill', function(d) {
-        return fillColor(d);
+        return d.colour;
       })
       .attr('stroke', function(d) {
-        return d3.rgb(fillColor(d)).darker();
+        return d3.rgb(d.colour).darker();
       })
       .attr('stroke-width', 2);
     // .on('mouseover', showDetail)
@@ -143,22 +141,11 @@ const bubbleChart = (() => {
       });
   }
 
-  // Provides a x value for each node to be used with the split by year x
-  // force.
-  function nodeYearPos(d) {
-    return yearCenters[d.year].x;
+  function optionPosition(d) {
+    return positions[d.option].x;
   }
 
   return chart;
 })();
 
-function display(error, data) {
-  if (error) {
-    console.log(error);
-  }
-
-  bubbleChart('#d3-simulation', data);
-}
-
-// Load the data.
-d3.csv('data/gates_money.csv', display);
+app.ports.graphData.subscribe(data => bubbleChart('#d3-simulation', data));

@@ -1,10 +1,87 @@
-module Main exposing (..)
+port module Main exposing (..)
 
 import Html exposing (Html, div, img, text)
 import Html.Attributes exposing (src)
 import Http
 import Json.Decode as D
+import Json.Encode as E
 import RemoteData exposing (RemoteData(..), WebData)
+
+
+-- PORTS --
+
+
+port graphData : E.Value -> Cmd msg
+
+
+graphDataValue : Vote -> E.Value
+graphDataValue vote =
+    E.list (List.map voteEventValue vote.votes)
+
+
+voteEventValue : VoteEvent -> E.Value
+voteEventValue event =
+    E.object
+        [ ( "name", E.string event.name )
+        , ( "partyColour", partyColour event |> E.string )
+        , ( "option", toString event.option |> String.toLower |> E.string )
+        ]
+
+
+partyColour : VoteEvent -> String
+partyColour event =
+    let
+        party =
+            Maybe.map String.toLower event.party
+
+        labour =
+            "#DC241f"
+    in
+    -- All colours obtained from Wikipedia.
+    case party of
+        Just "labour" ->
+            labour
+
+        Just "labour/co-operative" ->
+            labour
+
+        Just "conservative" ->
+            "#0087DC"
+
+        Just "liberal democrat" ->
+            "#FAA61A"
+
+        Just "scottish national party" ->
+            "#FEF987"
+
+        Just "dup" ->
+            "#D46A4C"
+
+        Just "sinn féin" ->
+            "#008800"
+
+        Just "plaid cymru" ->
+            "#008142"
+
+        Just "green" ->
+            "#6AB023"
+
+        Just "speaker" ->
+            "black"
+
+        Just "independent" ->
+            "grey"
+
+        Nothing ->
+            "black"
+
+        Just unknown ->
+            let
+                log =
+                    Debug.log "Unhandled party: " unknown
+            in
+            "rebeccapurple"
+
 
 
 ---- MODEL ----
@@ -112,7 +189,19 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         VoteResponse response ->
-            ( { model | latestVote = response }, Cmd.none )
+            ( { model | latestVote = response }
+            , sendGraphData response
+            )
+
+
+sendGraphData : WebData Vote -> Cmd msg
+sendGraphData voteResponse =
+    case voteResponse of
+        Success vote ->
+            graphDataValue vote |> graphData
+
+        _ ->
+            Cmd.none
 
 
 
