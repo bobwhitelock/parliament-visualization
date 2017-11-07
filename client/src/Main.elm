@@ -1,7 +1,8 @@
 port module Main exposing (..)
 
-import Html exposing (Html, div, img, text)
-import Html.Attributes exposing (src)
+import Html exposing (..)
+import Html.Attributes exposing (..)
+import Html.Events exposing (..)
 import Http
 import Json.Decode as D
 import Json.Encode as E
@@ -88,17 +89,24 @@ partyColour event =
 
 
 type alias Model =
-    { latestVote : WebData Vote }
+    { latestVote : WebData Vote
+    , voteInput : String
+    }
 
 
 type alias Vote =
-    { policyTitle : String
+    { id : VoteId
+    , policyTitle : String
     , text : String
     , actionsYes : Maybe String
     , actionsNo : Maybe String
     , date : String
     , votes : List VoteEvent
     }
+
+
+type VoteId
+    = VoteId Int
 
 
 type alias VoteEvent =
@@ -117,21 +125,34 @@ type VoteOption
 
 init : ( Model, Cmd Msg )
 init =
-    ( { latestVote = NotAsked }
+    ( { latestVote = NotAsked
+      , voteInput = ""
+      }
     , getLatestVote
     )
 
 
 getLatestVote : Cmd Msg
 getLatestVote =
-    Http.get "/latest-vote" voteDecoder
+    getVote "/latest-vote"
+
+
+getVoteById : Int -> Cmd Msg
+getVoteById id =
+    ("/vote/" ++ toString id) |> getVote
+
+
+getVote : String -> Cmd Msg
+getVote path =
+    Http.get path voteDecoder
         |> RemoteData.sendRequest
         |> Cmd.map VoteResponse
 
 
 voteDecoder : D.Decoder Vote
 voteDecoder =
-    D.map6 Vote
+    D.map7 Vote
+        (D.field "id" D.int |> D.map VoteId)
         (D.field "policy_title" D.string)
         (D.field "text" D.string)
         (D.field "actions_yes" (D.nullable D.string))
@@ -183,6 +204,8 @@ voteOptionDecoder =
 
 type Msg
     = VoteResponse (WebData Vote)
+    | VoteChanged String
+    | RequestVote
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -192,6 +215,21 @@ update msg model =
             ( { model | latestVote = response }
             , sendGraphData response
             )
+
+        VoteChanged input ->
+            { model | voteInput = input } ! []
+
+        RequestVote ->
+            let
+                id =
+                    String.toInt model.voteInput
+            in
+            case id of
+                Ok id_ ->
+                    ( { model | latestVote = NotAsked }, getVoteById id_ )
+
+                Err _ ->
+                    model ! []
 
 
 sendGraphData : WebData Vote -> Cmd msg
@@ -211,8 +249,14 @@ sendGraphData voteResponse =
 view : Model -> Html Msg
 view model =
     div []
-        [ img [ src "/logo.svg" ] []
-        , div [] [ text "Your Elm App is working!" ]
+        [ Html.form [ onSubmit RequestVote ]
+            [ input
+                [ onInput VoteChanged
+                , placeholder "Enter vote ID to get"
+                ]
+                []
+            , button [] [ text "Request" ]
+            ]
         ]
 
 
