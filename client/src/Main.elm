@@ -124,13 +124,13 @@ init =
 
 getLatestVote : Cmd Msg
 getLatestVote =
-    Http.get "/latest-vote" decodeVote
+    Http.get "/latest-vote" voteDecoder
         |> RemoteData.sendRequest
         |> Cmd.map VoteResponse
 
 
-decodeVote : D.Decoder Vote
-decodeVote =
+voteDecoder : D.Decoder Vote
+voteDecoder =
     D.map6 Vote
         (D.field "policy_title" D.string)
         (D.field "text" D.string)
