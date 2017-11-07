@@ -20,9 +20,52 @@ const positions = {
 
 const forceStrength = 0.03;
 
-const bubbleChart = (() => {
-  let bubbles;
-  let nodes;
+class BubbleChart {
+  constructor(selector, rawData) {
+    this.bubbles = null;
+    this.nodes = null;
+
+    // Called after every tick of the force simulation. Here we do the actual
+    // repositioning of the SVG circles based on the current x and y values of
+    // their bound node data.  These x and y values are modified by the force
+    // simulation.
+    this.ticked = () => {
+      this.bubbles.attr('cx', d => d.x).attr('cy', d => d.y);
+    };
+
+    this.simulation = d3
+      .forceSimulation()
+      .velocityDecay(0.2)
+      .force(
+        'x',
+        d3
+          .forceX()
+          .strength(forceStrength)
+          .x(this.optionPosition),
+      )
+      .force(
+        'y',
+        d3
+          .forceY()
+          .strength(forceStrength)
+          .y(center.y),
+      )
+      .force('charge', d3.forceManyBody().strength(this.charge))
+      .on('tick', this.ticked);
+
+    // Force simulation starts automatically, which we don't want as there aren't
+    // any nodes yet.
+    this.simulation.stop();
+
+    // Create a SVG element inside the provided selector with desired size.
+    this.svg = d3
+      .select(selector)
+      .append('svg')
+      .attr('width', width)
+      .attr('height', height);
+
+    this.setNodes(rawData);
+  }
 
   // Charge function that is called for each node.  As part of the ManyBody
   // force. This is what creates the repulsion between nodes.
@@ -34,36 +77,12 @@ const bubbleChart = (() => {
   // different sizes.
   //
   // Charge is negative because we want nodes to repel.
-  function charge(d) {
+  charge(d) {
     return -Math.pow(d.radius, 2.0) * forceStrength;
   }
 
-  const simulation = d3
-    .forceSimulation()
-    .velocityDecay(0.2)
-    .force(
-      'x',
-      d3
-        .forceX()
-        .strength(forceStrength)
-        .x(optionPosition),
-    )
-    .force(
-      'y',
-      d3
-        .forceY()
-        .strength(forceStrength)
-        .y(center.y),
-    )
-    .force('charge', d3.forceManyBody().strength(charge))
-    .on('tick', ticked);
-
-  // Force simulation starts automatically, which we don't want as there aren't
-  // any nodes yet.
-  simulation.stop();
-
-  function createNodes(rawData) {
-    const myNodes = rawData.map(function(d) {
+  setNodes(rawData) {
+    const nodes = rawData.map(function(d) {
       return {
         id: d.id,
         radius: 10,
@@ -74,27 +93,14 @@ const bubbleChart = (() => {
       };
     });
 
-    return myNodes;
-  }
-
-  const chart = function chart(selector, rawData) {
-    nodes = createNodes(rawData);
-
-    // Create a SVG element inside the provided selector with desired size.
-    const svg = d3
-      .select(selector)
-      .append('svg')
-      .attr('width', width)
-      .attr('height', height);
-
     // Bind nodes data to what will become DOM elements to represent them.
-    bubbles = svg.selectAll('.bubble').data(nodes, d => d.id);
+    this.bubbles = this.svg.selectAll('.bubble').data(nodes, d => d.id);
 
     // Create new circle elements each with class `bubble`.  There will be one
     // circle.bubble for each object in the nodes array.  Initially, their
     // radius (r attribute) will be 0.  Selections are immutable, so lets
     // capture the enter selection to apply our transition to below.
-    const bubblesE = bubbles
+    const bubblesE = this.bubbles
       .enter()
       .append('circle')
       .classed('bubble', true)
@@ -110,10 +116,10 @@ const bubbleChart = (() => {
     // .on('mouseout', hideDetail);
 
     // Merge the original empty selection and the enter selection
-    bubbles = bubbles.merge(bubblesE);
+    this.bubbles = this.bubbles.merge(bubblesE);
 
     // Fancy transition to make bubbles appear, ending with the correct radius
-    bubbles
+    this.bubbles
       .transition()
       .duration(2000)
       .attr('r', function(d) {
@@ -121,31 +127,15 @@ const bubbleChart = (() => {
       });
 
     // Set the simulation's nodes to our newly created nodes array.
-    simulation.nodes(nodes);
+    this.simulation.nodes(nodes);
 
     // Reset the alpha value and restart the simulation
-    simulation.alpha(1).restart();
-  };
-
-  // Called after every tick of the force simulation. Here we do the actual
-  // repositioning of the SVG circles based on the current x and y values of
-  // their bound node data.  These x and y values are modified by the force
-  // simulation.
-  function ticked() {
-    bubbles
-      .attr('cx', function(d) {
-        return d.x;
-      })
-      .attr('cy', function(d) {
-        return d.y;
-      });
+    this.simulation.alpha(1).restart();
   }
 
-  function optionPosition(d) {
+  optionPosition(d) {
     return positions[d.option].x;
   }
+}
 
-  return chart;
-})();
-
-app.ports.graphData.subscribe(data => bubbleChart('#d3-simulation', data));
+app.ports.graphData.subscribe(data => new BubbleChart('#d3-simulation', data));
