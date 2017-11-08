@@ -1,43 +1,12 @@
 #!/usr/bin/env ruby
 
 require 'sequel'
-require 'progressbar'
 
 DB = Sequel.postgres(username: 'postgres')
 
 def main
-  delete_any_existing_tables
-  create_tables
-
   load_people
   load_votes
-end
-
-def delete_any_existing_tables
-  DB.drop_table?(:vote_events, :votes, :people)
-end
-
-def create_tables
-  DB.create_table :people do
-    String :id, primary_key: true, null: false
-    String :name
-    String :party
-  end
-
-  DB.create_table :votes do
-    primary_key :id
-    String :policy_title
-    String :text
-    String :actions_yes
-    String :actions_no
-    Date :date
-  end
-
-  DB.create_table :vote_events do
-    String :option, null: false
-    foreign_key :person_id, :people, type: String, null: false
-    foreign_key :vote_id, :votes, null: false
-  end
 end
 
 def load_people
