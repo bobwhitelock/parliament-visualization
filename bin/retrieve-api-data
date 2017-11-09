@@ -1,0 +1,42 @@
+#!/usr/bin/env ruby
+
+require 'http'
+require 'parallel'
+
+TWFY_API_KEY = ENV.fetch('TWFY_API_KEY')
+TWFY_GET_MPS_URL = 'https://www.theyworkforyou.com/api/getMPs'
+MPS_DATA_DIR = 'data/mps'
+
+def main
+  FileUtils.mkdir_p(MPS_DATA_DIR)
+
+  # Before earliest date in votes data.
+  start_date = Date.new(1997, 11, 1)
+
+  # Want to get MPs on first of every month since start date; that should be
+  # sufficient to cover all changes due to elections, by-elections, defections
+  # etc.
+  dates_to_retrieve = start_date.upto(Date.today).select do |date|
+    date.day == 1
+  end.map do |date|
+    [date.year, date.month, date.day].join('-')
+  end
+
+  Parallel.map(dates_to_retrieve, progress: "Retrieving MPs API data") do |date|
+    data = retrieve_mps_data(date: date)
+    data_file = File.join(MPS_DATA_DIR, "#{date}.json")
+    File.write(data_file, JSON.pretty_generate(data))
+    sleep 0.5
+  end
+end
+
+def retrieve_mps_data(date:)
+  response = HTTP.get(TWFY_GET_MPS_URL, params: {
+    key: TWFY_API_KEY,
+    output: 'js',
+    date: date,
+  })
+  JSON.parse(response.body.to_s)
+end
+
+main
