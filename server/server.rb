@@ -19,7 +19,7 @@ def data_for_vote(vote)
   votes = DB[:vote_events].where(
     vote_id: vote[:id]
   ).join(
-    :people, id: :person_id
+    :people, person_id: :person_id
   ).to_a
 
   vote.merge(votes: votes).to_json

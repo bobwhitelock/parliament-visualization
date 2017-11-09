@@ -3,6 +3,7 @@
 require 'sequel'
 
 DB = Sequel.postgres(username: 'postgres')
+PERSON_ID_REGEX = /uk\.org\.publicwhip\/person\/(\d+)/
 
 def main
   load_people
@@ -15,8 +16,9 @@ def load_people
       # This person will be picked up when get to redirect.
       nil
     else
-      p_name = p['other_names'].select { |fields| fields['note'] == 'Main' }.first
+      person_id = extract_person_id(p['id'])
 
+      p_name = p['other_names'].select { |fields| fields['note'] == 'Main' }.first
       name = [
         p_name['given_name'],
         p_name['family_name']
@@ -24,11 +26,11 @@ def load_people
 
       party = (p['shortcuts'] || {})['current_party']
 
-      [p['id'], name, party]
+      [person_id, name, party]
     end
   end.reject(&:nil?)
 
-  DB[:people].import([:id, :name, :party], data)
+  DB[:people].import([:person_id, :name, :party], data)
 end
 
 def load_votes
@@ -52,12 +54,17 @@ def load_votes
       raise if vote_events.length > 1
 
       vote_events.first['votes'].map do |vote|
-        [vote['option'], vote['id'], vote_id]
+        person_id = extract_person_id(vote['id'])
+        [vote['option'], person_id, vote_id]
       end
     end
   end
 
   DB[:vote_events].import([:option, :person_id, :vote_id], vote_events_data)
+end
+
+def extract_person_id(id_string)
+  id_string.match(PERSON_ID_REGEX)[1]
 end
 
 main
