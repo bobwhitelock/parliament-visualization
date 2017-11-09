@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
 
+require 'progressbar'
 require 'sequel'
 
 DB = Sequel.postgres(username: 'postgres')
@@ -34,7 +35,10 @@ def load_people
 end
 
 def load_votes
-  vote_events_data = JSON.load(File.new('data/policies.json')).flat_map do |p|
+  raw_data = JSON.load(File.new('data/policies.json'))
+  progress_bar = ProgressBar.create(title: 'Extracting votes', total: raw_data.length)
+
+  vote_events_data = raw_data.flat_map do |p|
     policy_title = p['title']
 
     p['aspects'].flat_map do |a|
@@ -57,9 +61,10 @@ def load_votes
         person_id = extract_person_id(vote['id'])
         [vote['option'], person_id, vote_id]
       end
-    end
+    end.tap { progress_bar.increment }
   end
 
+  puts 'Importing vote events...'
   DB[:vote_events].import([:option, :person_id, :vote_id], vote_events_data)
 end
 
