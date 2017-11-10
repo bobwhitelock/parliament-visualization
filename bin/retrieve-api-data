@@ -10,21 +10,21 @@ MPS_DATA_DIR = 'data/mps'
 def main
   FileUtils.mkdir_p(MPS_DATA_DIR)
 
-  # Before earliest date in votes data.
-  start_date = Date.new(1997, 11, 1)
-
-  # Want to get MPs on first of every month since start date; that should be
-  # sufficient to cover all changes due to elections, by-elections, defections
-  # etc.
-  dates_to_retrieve = start_date.upto(Date.today).select do |date|
-    date.day == 1
-  end.map do |date|
+  # Want to get MPs as existed on date of every vote.
+  vote_dates = JSON.load(File.new('data/policies.json')).flat_map do |policy|
+    policy['aspects'].flat_map do |aspect|
+      Date.strptime(aspect['motion']['date'])
+    end
+  end.uniq.map do |date|
     [date.year, date.month, date.day].join('-')
+  end.reject do |date|
+    # If we've already retrieved data from this date don't need to do so again.
+    File.exists?(mps_data_file(date: date))
   end
 
-  Parallel.map(dates_to_retrieve, progress: "Retrieving MPs API data") do |date|
+  Parallel.map(vote_dates, progress: "Retrieving MPs API data") do |date|
     data = retrieve_mps_data(date: date)
-    data_file = File.join(MPS_DATA_DIR, "#{date}.json")
+    data_file = mps_data_file(date: date)
     File.write(data_file, JSON.pretty_generate(data))
     sleep 0.5
   end
@@ -37,6 +37,10 @@ def retrieve_mps_data(date:)
     date: date,
   })
   JSON.parse(response.body.to_s)
+end
+
+def mps_data_file(date:)
+  File.join(MPS_DATA_DIR, "#{date}.json")
 end
 
 main
