@@ -39,25 +39,30 @@ def load_votes
 
     p['aspects'].flat_map do |a|
       motion = a['motion']
-      actions = motion['actions'] || {}
-      date = Date.strptime(motion['date'])
 
-      vote_id = DB[:votes].insert({
-        policy_title: policy_title,
-        text: motion['text'],
-        actions_yes: actions['yes'],
-        actions_no: actions['no'],
-        date: date,
-      })
+      # Only care about parliament votes.
+      if motion['organization_id'] == 'uk.parliament.commons'
 
-      vote_events = motion['vote_events']
-      raise if vote_events.length > 1
+        actions = motion['actions'] || {}
+        date = Date.strptime(motion['date'])
 
-      vote_events.first['votes'].map do |vote|
-        person_id = extract_person_id(vote['id'])
-        [vote['option'], person_id, vote_id]
+        vote_id = DB[:votes].insert({
+          policy_title: policy_title,
+          text: motion['text'],
+          actions_yes: actions['yes'],
+          actions_no: actions['no'],
+          date: date,
+        })
+
+        vote_events = motion['vote_events']
+        raise if vote_events.length > 1
+
+        vote_events.first['votes'].map do |vote|
+          person_id = extract_person_id(vote['id'])
+          [vote['option'], person_id, vote_id]
+        end
       end
-    end.tap { progress_bar.increment }
+    end.reject(&:nil?).tap { progress_bar.increment }
   end
 
   puts 'Importing vote events...'
