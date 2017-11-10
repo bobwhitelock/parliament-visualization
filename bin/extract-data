@@ -4,6 +4,7 @@ require 'progressbar'
 require 'sequel'
 
 DB = Sequel.postgres(username: 'postgres')
+MPS_FILE_DATE_REGEX = /data\/mps\/(\d{4})-(\d{1,2})-(\d{1,2})\.json/
 PERSON_ID_REGEX = /uk\.org\.publicwhip\/person\/(\d+)/
 
 def main
@@ -12,26 +13,21 @@ def main
 end
 
 def load_people
-  data = JSON.load(File.new('data/people.json'))['persons'].map do |p|
-    if p['redirect']
-      # This person will be picked up when get to redirect.
-      nil
-    else
-      person_id = extract_person_id(p['id'])
+  files = Dir['data/mps/*.json']
+  progress_bar = ProgressBar.create(title: 'Extracting MPs', total: files.length)
 
-      p_name = p['other_names'].select { |fields| fields['note'] == 'Main' }.first
-      name = [
-        p_name['given_name'],
-        p_name['family_name']
-      ].join(' ')
+  people_data = files.flat_map do |file|
+    date_match = file.match(MPS_FILE_DATE_REGEX)
+    year, month, day = date_match[1].to_i, date_match[2].to_i, date_match[3].to_i
+    date = Date.new(year, month, day)
 
-      party = (p['shortcuts'] || {})['current_party']
+    JSON.load(File.new(file)).map do |person|
+      [person['person_id'], date, person['name'], person['party']]
+    end.tap { progress_bar.increment }
+  end
 
-      [person_id, name, party]
-    end
-  end.reject(&:nil?)
-
-  DB[:people].import([:person_id, :name, :party], data)
+  puts 'Importing people...'
+  DB[:people].import([:person_id, :date, :name, :party], people_data)
 end
 
 def load_votes

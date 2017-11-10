@@ -15,7 +15,10 @@ end
 
 def create_tables
   DB.create_table :people do
-    Integer :person_id, primary_key: true, null: false
+    Integer :person_id, null: false
+    Date :date, null: false
+    primary_key [:person_id, :date]
+
     String :name
     String :party
   end
@@ -31,7 +34,7 @@ def create_tables
 
   DB.create_table :vote_events do
     String :option, null: false
-    foreign_key :person_id, :people, null: false
+    Integer :person_id, null: false, index: true
     foreign_key :vote_id, :votes, null: false
   end
 end
