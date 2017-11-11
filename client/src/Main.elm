@@ -11,6 +11,7 @@ import Json.Decode as D
 import Json.Encode as E
 import Maybe.Extra
 import RemoteData exposing (RemoteData(..), WebData)
+import SelectList exposing (SelectList)
 
 
 -- PORTS --
@@ -324,6 +325,7 @@ type Msg
     | RequestVoteEvents
     | VoteEventsResponse VoteId (WebData (List VoteEvent))
     | VoteChanged String
+    | ShowVote VoteId
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -380,6 +382,14 @@ update msg model =
         VoteChanged input ->
             { model | voteInput = input } ! []
 
+        ShowVote voteId ->
+            case model.votes of
+                Success votes ->
+                    { model | votes = Votes voteId votes.data |> Success } ! []
+
+                _ ->
+                    model ! []
+
 
 selectedVote : Votes -> Maybe Vote
 selectedVote { selected, data } =
@@ -391,14 +401,98 @@ sendGraphData vote =
     graphDataValue vote |> graphData
 
 
+timeOrderedVotes : Votes -> Maybe (SelectList Vote)
+timeOrderedVotes { selected, data } =
+    let
+        compare =
+            \vote1 -> \vote2 -> Date.Extra.compare vote1.date vote2.date
+
+        orderedVotes =
+            Dict.toList data
+                |> List.map Tuple.second
+                |> List.sortWith compare
+    in
+    -- XXX Use SelectList.fromList once exists.
+    case ( List.head orderedVotes, List.tail orderedVotes ) of
+        ( Just head, Just tail ) ->
+            SelectList.fromLists [] head tail
+                |> SelectList.select (\vote -> vote.id == selected)
+                |> Just
+
+        _ ->
+            Nothing
+
+
 
 ---- VIEW ----
 
 
 view : Model -> Html Msg
 view model =
+    case model.votes of
+        Success votes ->
+            case timeOrderedVotes votes of
+                Just votes_ ->
+                    viewVotes votes_
+
+                Nothing ->
+                    div [] [ text "No votes available." ]
+
+        Failure error ->
+            div [] [ "Error loading data: " ++ toString error |> text ]
+
+        NotAsked ->
+            div [] []
+
+        Loading ->
+            div [] [ text "Loading..." ]
+
+
+viewVotes : SelectList Vote -> Html Msg
+viewVotes votes =
+    let
+        currentVote =
+            SelectList.selected votes
+
+        previousVote =
+            SelectList.before votes
+                |> List.reverse
+                |> List.head
+
+        nextVote =
+            SelectList.after votes
+                |> List.head
+
+        previousVoteButton =
+            voteNavigationButton previousVote "<"
+
+        nextVoteButton =
+            voteNavigationButton nextVote ">"
+
+        voteNavigationButton =
+            \maybeVote ->
+                \icon ->
+                    case maybeVote of
+                        Just { id } ->
+                            button [ onClick (ShowVote id) ] [ text icon ]
+
+                        Nothing ->
+                            span [] []
+    in
     div []
-        [ Html.form [ onSubmit RequestVoteEvents ]
+        [ div []
+            [ "Current vote: "
+                ++ currentVote.policyTitle
+                ++ " | "
+                ++ currentVote.text
+                ++ " | "
+                ++ Date.Extra.toFormattedString "ddd MMMM, y" currentVote.date
+                |> text
+            ]
+        , previousVoteButton
+        , nextVoteButton
+        , Html.form
+            [ onSubmit RequestVoteEvents ]
             [ input
                 [ onInput VoteChanged
                 , placeholder "Enter vote ID to get"
