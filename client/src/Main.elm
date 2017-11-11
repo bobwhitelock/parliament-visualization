@@ -1,5 +1,7 @@
 port module Main exposing (..)
 
+import Date exposing (Date)
+import Date.Extra
 import EveryDict as Dict exposing (EveryDict)
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -7,6 +9,7 @@ import Html.Events exposing (..)
 import Http
 import Json.Decode as D
 import Json.Encode as E
+import Maybe.Extra
 import RemoteData exposing (RemoteData(..), WebData)
 
 
@@ -114,7 +117,7 @@ type alias Vote =
     , text : String
     , actionsYes : Maybe String
     , actionsNo : Maybe String
-    , date : String
+    , date : Date
     , voteEvents : WebData (List VoteEvent)
     }
 
@@ -172,12 +175,23 @@ initialVotesDecoder : D.Decoder Votes
 initialVotesDecoder =
     let
         createInitialVotes =
-            \votes ->
-                \latestVote ->
-                    Votes latestVote.id
-                        (createVotesDict votes
-                            |> Dict.insert latestVote.id latestVote
-                        )
+            \( votes, latestVote ) ->
+                let
+                    -- Every Vote should have a date, but need to filter
+                    -- out any which somehow didn't to ensure this.
+                    votesWithDates =
+                        Maybe.Extra.values votes
+                in
+                case latestVote of
+                    Just latest ->
+                        Votes latest.id
+                            (createVotesDict votesWithDates
+                                |> Dict.insert latest.id latest
+                            )
+                            |> D.succeed
+
+                    Nothing ->
+                        D.fail "Latest vote has no date!"
 
         createVotesDict =
             \votes ->
@@ -186,12 +200,13 @@ initialVotesDecoder =
                     votes
                     |> Dict.fromList
     in
-    D.map2 createInitialVotes
+    D.map2 (,)
         (D.field "votes" (D.list voteWithoutEventsDecoder))
         (D.field "latestVote" voteWithEventsDecoder)
+        |> D.andThen createInitialVotes
 
 
-voteWithoutEventsDecoder : D.Decoder Vote
+voteWithoutEventsDecoder : D.Decoder (Maybe Vote)
 voteWithoutEventsDecoder =
     let
         initialVoteState =
@@ -201,14 +216,20 @@ voteWithoutEventsDecoder =
                         \actionsYes ->
                             \actionsNo ->
                                 \date ->
-                                    Vote
-                                        id
-                                        policyTitle
-                                        text
-                                        actionsYes
-                                        actionsNo
-                                        date
-                                        NotAsked
+                                    case Date.Extra.fromIsoString date of
+                                        Just date_ ->
+                                            Vote
+                                                id
+                                                policyTitle
+                                                text
+                                                actionsYes
+                                                actionsNo
+                                                date_
+                                                NotAsked
+                                                |> Just
+
+                                        Nothing ->
+                                            Nothing
     in
     D.map6 initialVoteState
         (D.field "id" D.int |> D.map VoteId)
@@ -219,10 +240,34 @@ voteWithoutEventsDecoder =
         (D.field "date" D.string)
 
 
-voteWithEventsDecoder : D.Decoder Vote
+voteWithEventsDecoder : D.Decoder (Maybe Vote)
 voteWithEventsDecoder =
     -- XXX de-duplicate this and above.
-    D.map7 Vote
+    let
+        createVote =
+            \id ->
+                \policyTitle ->
+                    \text ->
+                        \actionsYes ->
+                            \actionsNo ->
+                                \date ->
+                                    \voteEvents ->
+                                        case Date.Extra.fromIsoString date of
+                                            Just date_ ->
+                                                Vote
+                                                    id
+                                                    policyTitle
+                                                    text
+                                                    actionsYes
+                                                    actionsNo
+                                                    date_
+                                                    voteEvents
+                                                    |> Just
+
+                                            Nothing ->
+                                                Nothing
+    in
+    D.map7 createVote
         (D.field "id" D.int |> D.map VoteId)
         (D.field "policy_title" D.string)
         (D.field "text" D.string)
