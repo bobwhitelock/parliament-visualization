@@ -1,5 +1,6 @@
 port module Main exposing (..)
 
+import EveryDict as Dict exposing (EveryDict)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
@@ -17,7 +18,13 @@ port graphData : E.Value -> Cmd msg
 
 graphDataValue : Vote -> E.Value
 graphDataValue vote =
-    E.list (List.map voteEventValue vote.votes)
+    case vote.voteEvents of
+        Success events ->
+            E.list (List.map voteEventValue events)
+
+        _ ->
+            -- XXX Handle this better.
+            E.null
 
 
 voteEventValue : VoteEvent -> E.Value
@@ -90,8 +97,14 @@ partyColour event =
 
 
 type alias Model =
-    { latestVote : WebData Vote
+    { votes : WebData Votes
     , voteInput : String
+    }
+
+
+type alias Votes =
+    { selected : VoteId
+    , data : EveryDict VoteId Vote
     }
 
 
@@ -102,7 +115,7 @@ type alias Vote =
     , actionsYes : Maybe String
     , actionsNo : Maybe String
     , date : String
-    , votes : List VoteEvent
+    , voteEvents : WebData (List VoteEvent)
     }
 
 
@@ -127,32 +140,88 @@ type VoteOption
 
 init : ( Model, Cmd Msg )
 init =
-    ( { latestVote = NotAsked
+    ( { votes = NotAsked
       , voteInput = ""
       }
-    , getLatestVote
+    , getInitialVotes
     )
 
 
-getLatestVote : Cmd Msg
-getLatestVote =
-    getVote "/latest-vote"
-
-
-getVoteById : Int -> Cmd Msg
-getVoteById id =
-    ("/vote/" ++ toString id) |> getVote
-
-
-getVote : String -> Cmd Msg
-getVote path =
-    Http.get path voteDecoder
+getInitialVotes : Cmd Msg
+getInitialVotes =
+    Http.get "/votes" initialVotesDecoder
         |> RemoteData.sendRequest
-        |> Cmd.map VoteResponse
+        |> Cmd.map InitialVotesResponse
 
 
-voteDecoder : D.Decoder Vote
-voteDecoder =
+getEventsForVote : VoteId -> Cmd Msg
+getEventsForVote voteId =
+    let
+        (VoteId id) =
+            voteId
+
+        path =
+            "/vote-events/" ++ toString id
+    in
+    Http.get path (D.list voteEventDecoder)
+        |> RemoteData.sendRequest
+        |> Cmd.map (VoteEventsResponse voteId)
+
+
+initialVotesDecoder : D.Decoder Votes
+initialVotesDecoder =
+    let
+        createInitialVotes =
+            \votes ->
+                \latestVote ->
+                    Votes latestVote.id
+                        (createVotesDict votes
+                            |> Dict.insert latestVote.id latestVote
+                        )
+
+        createVotesDict =
+            \votes ->
+                List.map
+                    (\vote -> ( vote.id, vote ))
+                    votes
+                    |> Dict.fromList
+    in
+    D.map2 createInitialVotes
+        (D.field "votes" (D.list voteWithoutEventsDecoder))
+        (D.field "latestVote" voteWithEventsDecoder)
+
+
+voteWithoutEventsDecoder : D.Decoder Vote
+voteWithoutEventsDecoder =
+    let
+        initialVoteState =
+            \id ->
+                \policyTitle ->
+                    \text ->
+                        \actionsYes ->
+                            \actionsNo ->
+                                \date ->
+                                    Vote
+                                        id
+                                        policyTitle
+                                        text
+                                        actionsYes
+                                        actionsNo
+                                        date
+                                        NotAsked
+    in
+    D.map6 initialVoteState
+        (D.field "id" D.int |> D.map VoteId)
+        (D.field "policy_title" D.string)
+        (D.field "text" D.string)
+        (D.field "actions_yes" (D.nullable D.string))
+        (D.field "actions_no" (D.nullable D.string))
+        (D.field "date" D.string)
+
+
+voteWithEventsDecoder : D.Decoder Vote
+voteWithEventsDecoder =
+    -- XXX de-duplicate this and above.
     D.map7 Vote
         (D.field "id" D.int |> D.map VoteId)
         (D.field "policy_title" D.string)
@@ -160,7 +229,7 @@ voteDecoder =
         (D.field "actions_yes" (D.nullable D.string))
         (D.field "actions_no" (D.nullable D.string))
         (D.field "date" D.string)
-        (D.field "votes" (D.list voteEventDecoder))
+        (D.field "voteEvents" (D.list voteEventDecoder |> D.map Success))
 
 
 voteEventDecoder : D.Decoder VoteEvent
@@ -206,43 +275,75 @@ voteOptionDecoder =
 
 
 type Msg
-    = VoteResponse (WebData Vote)
+    = InitialVotesResponse (WebData Votes)
+    | RequestVoteEvents
+    | VoteEventsResponse VoteId (WebData (List VoteEvent))
     | VoteChanged String
-    | RequestVote
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        VoteResponse response ->
-            ( { model | latestVote = response }
-            , sendGraphData response
-            )
+        InitialVotesResponse response ->
+            let
+                cmd =
+                    case response of
+                        Success votes ->
+                            selectedVote votes
+                                |> Maybe.map sendGraphData
+                                |> Maybe.withDefault Cmd.none
+
+                        _ ->
+                            Cmd.none
+            in
+            ( { model | votes = response }, cmd )
+
+        RequestVoteEvents ->
+            let
+                id =
+                    String.toInt model.voteInput
+                        |> Result.toMaybe
+                        |> Maybe.map VoteId
+            in
+            case ( id, model.votes ) of
+                ( Just id_, Success votes ) ->
+                    ( model, getEventsForVote id_ )
+
+                _ ->
+                    model ! []
+
+        VoteEventsResponse voteId response ->
+            let
+                votes =
+                    case model.votes of
+                        Success { selected, data } ->
+                            Votes selected
+                                (Dict.update
+                                    voteId
+                                    (Maybe.map (\vote -> { vote | voteEvents = response }))
+                                    data
+                                )
+                                |> Success
+
+                        -- Initial data didn't load, so shouldn't receive and
+                        -- can't do anything with this response.
+                        otherWebData ->
+                            otherWebData
+            in
+            { model | votes = votes } ! []
 
         VoteChanged input ->
             { model | voteInput = input } ! []
 
-        RequestVote ->
-            let
-                id =
-                    String.toInt model.voteInput
-            in
-            case id of
-                Ok id_ ->
-                    ( { model | latestVote = NotAsked }, getVoteById id_ )
 
-                Err _ ->
-                    model ! []
+selectedVote : Votes -> Maybe Vote
+selectedVote { selected, data } =
+    Dict.get selected data
 
 
-sendGraphData : WebData Vote -> Cmd msg
-sendGraphData voteResponse =
-    case voteResponse of
-        Success vote ->
-            graphDataValue vote |> graphData
-
-        _ ->
-            Cmd.none
+sendGraphData : Vote -> Cmd msg
+sendGraphData vote =
+    graphDataValue vote |> graphData
 
 
 
@@ -252,7 +353,7 @@ sendGraphData voteResponse =
 view : Model -> Html Msg
 view model =
     div []
-        [ Html.form [ onSubmit RequestVote ]
+        [ Html.form [ onSubmit RequestVoteEvents ]
             [ input
                 [ onInput VoteChanged
                 , placeholder "Enter vote ID to get"
