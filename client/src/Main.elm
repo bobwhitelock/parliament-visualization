@@ -23,7 +23,8 @@ graphDataValue vote =
 voteEventValue : VoteEvent -> E.Value
 voteEventValue event =
     E.object
-        [ ( "name", E.string event.name )
+        [ ( "personId", E.int event.personId )
+        , ( "name", E.string event.name )
         , ( "partyColour", partyColour event |> E.string )
         , ( "option", toString event.option |> String.toLower |> E.string )
         ]
@@ -110,7 +111,8 @@ type VoteId
 
 
 type alias VoteEvent =
-    { name : String
+    { personId : Int
+    , name : String
     , party : Maybe String
     , option : VoteOption
     }
@@ -163,7 +165,8 @@ voteDecoder =
 
 voteEventDecoder : D.Decoder VoteEvent
 voteEventDecoder =
-    D.map3 VoteEvent
+    D.map4 VoteEvent
+        (D.field "person_id" D.int)
         (D.field "name" D.string)
         (D.field "party" (D.nullable D.string))
         (D.field "option" voteOptionDecoder)

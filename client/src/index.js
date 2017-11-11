@@ -21,7 +21,7 @@ const positions = {
 const forceStrength = 0.03;
 
 class BubbleChart {
-  constructor(selector, rawData) {
+  constructor(selector) {
     this.bubbles = null;
     this.nodes = null;
 
@@ -63,8 +63,6 @@ class BubbleChart {
       .append('svg')
       .attr('width', width)
       .attr('height', height);
-
-    this.setNodes(rawData);
   }
 
   // Charge function that is called for each node.  As part of the ManyBody
@@ -82,19 +80,27 @@ class BubbleChart {
   }
 
   setNodes(rawData) {
-    const nodes = rawData.map(function(d) {
+    this.nodes = rawData.map(d => {
+      const currentNode = ((this.nodes &&
+        this.nodes.filter(node => node.personId == d.personId)) ||
+        {})[0];
+
       return {
-        id: d.id,
+        personId: d.personId,
         radius: 10,
         colour: d.partyColour,
         option: d.option,
-        x: Math.random() * 900,
-        y: Math.random() * 800,
+        x: currentNode ? currentNode.x : Math.random() * 900,
+        y: currentNode ? currentNode.y : Math.random() * 800,
       };
     });
 
     // Bind nodes data to what will become DOM elements to represent them.
-    this.bubbles = this.svg.selectAll('.bubble').data(nodes, d => d.id);
+    this.bubbles = this.svg
+      .selectAll('.bubble')
+      .data(this.nodes, d => d.personId);
+
+    this.bubbles.exit().remove();
 
     // Create new circle elements each with class `bubble`.  There will be one
     // circle.bubble for each object in the nodes array.  Initially, their
@@ -127,7 +133,7 @@ class BubbleChart {
       });
 
     // Set the simulation's nodes to our newly created nodes array.
-    this.simulation.nodes(nodes);
+    this.simulation.nodes(this.nodes);
 
     // Reset the alpha value and restart the simulation
     this.simulation.alpha(1).restart();
@@ -138,4 +144,11 @@ class BubbleChart {
   }
 }
 
-app.ports.graphData.subscribe(data => new BubbleChart('#d3-simulation', data));
+let chart = null;
+
+app.ports.graphData.subscribe(data => {
+  if (!chart) {
+    chart = new BubbleChart('#d3-simulation', data);
+  }
+  chart.setNodes(data);
+});
