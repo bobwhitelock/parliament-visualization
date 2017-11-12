@@ -13,6 +13,8 @@ import Maybe.Extra
 import RemoteData exposing (RemoteData(..), WebData)
 import SelectList exposing (SelectList)
 import Svg
+import Tachyons exposing (classes, tachyons)
+import Tachyons.Classes exposing (..)
 
 
 -- PORTS --
@@ -396,14 +398,28 @@ handleVoteStateChange model =
                             )
 
                         NotAsked ->
-                            model ! [ getEventsForVote vote.id ]
+                            let
+                                newVotesData =
+                                    Dict.update
+                                        vote.id
+                                        (Maybe.map
+                                            (\vote -> { vote | voteEvents = Loading })
+                                        )
+                                        votes.data
+
+                                newVotes =
+                                    Votes votes.selected newVotesData |> Success
+
+                                newModel =
+                                    { model | votes = newVotes }
+                            in
+                            newModel ! [ getEventsForVote vote.id ]
 
                         Failure _ ->
                             -- XXX Handle this somewhere?
                             model ! []
 
                         Loading ->
-                            -- XXX Handle this somewhere?
                             model ! []
 
                 Nothing ->
@@ -515,9 +531,26 @@ viewVotes votes =
 
                                 Nothing ->
                                     span [] []
+
+                chartClasses =
+                    if RemoteData.isLoading current.voteEvents then
+                        [ o_70 ]
+                    else
+                        []
+
+                chart =
+                    div [ classes chartClasses ]
+                        [ Svg.svg
+                            [ width 1000
+                            , height 800
+                            , id "d3-simulation"
+                            ]
+                            []
+                        ]
             in
             div []
-                [ div []
+                [ tachyons.css
+                , div []
                     [ "Current vote: "
                         ++ current.policyTitle
                         ++ " | "
@@ -528,12 +561,7 @@ viewVotes votes =
                     ]
                 , div []
                     [ previousVoteButton, nextVoteButton ]
-                , Svg.svg
-                    [ width 1000
-                    , height 800
-                    , id "d3-simulation"
-                    ]
-                    []
+                , chart
                 ]
 
         _ ->
