@@ -12,6 +12,7 @@ import Json.Encode as E
 import Maybe.Extra
 import RemoteData exposing (RemoteData(..), WebData)
 import SelectList exposing (SelectList)
+import Svg
 
 
 -- PORTS --
@@ -510,8 +511,14 @@ viewVotes votes =
                 ++ Date.Extra.toFormattedString "ddd MMMM, y" currentVote.date
                 |> text
             ]
-        , previousVoteButton
-        , nextVoteButton
+        , div []
+            [ previousVoteButton, nextVoteButton ]
+        , Svg.svg
+            [ width 1000
+            , height 800
+            , id "d3-simulation"
+            ]
+            []
         ]
 
 
