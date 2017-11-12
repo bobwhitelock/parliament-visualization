@@ -101,6 +101,9 @@ class BubbleChart {
 
     this.bubbles.exit().remove();
 
+    const personNodeHovered = node =>
+      app.ports.personNodeHovered.send(node.personId);
+
     // Create new circle elements each with class `bubble`.  There will be one
     // circle.bubble for each object in the nodes array.  Initially, their
     // radius (r attribute) will be 0.  Selections are immutable, so lets
@@ -116,8 +119,8 @@ class BubbleChart {
       .attr('stroke', function(d) {
         return d3.rgb(d.colour).darker();
       })
-      .attr('stroke-width', 2);
-    // .on('mouseover', showDetail)
+      .attr('stroke-width', 2)
+      .on('mouseover', personNodeHovered);
     // .on('mouseout', hideDetail);
 
     // Merge the original empty selection and the enter selection

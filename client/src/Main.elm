@@ -9,6 +9,7 @@ import Html.Events exposing (..)
 import Http
 import Json.Decode as D
 import Json.Encode as E
+import List.Extra
 import Maybe.Extra
 import RemoteData exposing (RemoteData(..), WebData)
 import SelectList exposing (SelectList)
@@ -21,6 +22,9 @@ import Tachyons.Classes exposing (..)
 
 
 port chartData : E.Value -> Cmd msg
+
+
+port personNodeHovered : (Int -> msg) -> Sub msg
 
 
 chartDataValue : Vote -> E.Value
@@ -104,6 +108,7 @@ type alias Model =
     { votes : WebData Votes
     , chartVoteId : Maybe VoteId
     , voteInput : String
+    , hoveredPersonId : Maybe Int
     }
 
 
@@ -148,6 +153,7 @@ init =
     ( { votes = NotAsked
       , chartVoteId = Nothing
       , voteInput = ""
+      , hoveredPersonId = Nothing
       }
     , getInitialVotes
     )
@@ -327,6 +333,7 @@ type Msg
     | VoteEventsResponse VoteId (WebData (List VoteEvent))
     | VoteChanged String
     | ShowVote VoteId
+    | PersonNodeHovered Int
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -377,6 +384,9 @@ update msg model =
 
                 _ ->
                     model ! []
+
+        PersonNodeHovered personId ->
+            { model | hoveredPersonId = Just personId } ! []
 
 
 {-|
@@ -499,7 +509,7 @@ view : Model -> Html Msg
 view model =
     case model.votes of
         Success votes ->
-            viewVotes votes
+            viewVotes model.hoveredPersonId votes
 
         Failure error ->
             div [] [ "Error loading data: " ++ toString error |> text ]
@@ -511,8 +521,8 @@ view model =
             div [] [ text "Loading..." ]
 
 
-viewVotes : Votes -> Html Msg
-viewVotes votes =
+viewVotes : Maybe Int -> Votes -> Html Msg
+viewVotes hoveredPersonId votes =
     case ( selectedVote votes, neighbouringVotes votes ) of
         ( Just current, Just { previous, next } ) ->
             let
@@ -531,6 +541,28 @@ viewVotes votes =
 
                                 Nothing ->
                                     span [] []
+
+                hoveredPersonEvent =
+                    case ( current.voteEvents, hoveredPersonId ) of
+                        ( Success events, Just personId ) ->
+                            List.Extra.find
+                                (.personId >> (==) personId)
+                                events
+
+                        _ ->
+                            Nothing
+
+                hoveredPersonText =
+                    case hoveredPersonEvent of
+                        Just event ->
+                            event.name
+                                ++ " | "
+                                ++ event.party
+                                ++ " | "
+                                ++ toString event.option
+
+                        Nothing ->
+                            "Nobody"
 
                 chartClasses =
                     if RemoteData.isLoading current.voteEvents then
@@ -559,6 +591,7 @@ viewVotes votes =
                         ++ Date.Extra.toFormattedString "ddd MMMM, y" current.date
                         |> text
                     ]
+                , div [] [ "Hovered over: " ++ hoveredPersonText |> text ]
                 , div []
                     [ previousVoteButton, nextVoteButton ]
                 , chart
@@ -566,6 +599,15 @@ viewVotes votes =
 
         _ ->
             div [] [ text "No votes available." ]
+
+
+
+---- SUBSCRIPTIONS ----
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    personNodeHovered PersonNodeHovered
 
 
 
@@ -578,5 +620,5 @@ main =
         { view = view
         , init = init
         , update = update
-        , subscriptions = always Sub.none
+        , subscriptions = subscriptions
         }
