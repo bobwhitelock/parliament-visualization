@@ -425,6 +425,7 @@ sendChartData vote =
 
 timeOrderedVotes : Votes -> Maybe (SelectList Vote)
 timeOrderedVotes { selected, data } =
+    -- XXX Remove use of SelectList here; not really necessary?
     let
         compare =
             \vote1 -> \vote2 -> Date.Extra.compare vote1.date vote2.date
@@ -445,6 +446,35 @@ timeOrderedVotes { selected, data } =
             Nothing
 
 
+neighbouringVotes : Votes -> Maybe NeighbouringVotes
+neighbouringVotes votes =
+    case timeOrderedVotes votes of
+        Just orderedVotes ->
+            let
+                previousVote =
+                    SelectList.before orderedVotes
+                        |> List.reverse
+                        |> List.head
+
+                nextVote =
+                    SelectList.after orderedVotes
+                        |> List.head
+            in
+            Just
+                { previous = previousVote
+                , next = nextVote
+                }
+
+        Nothing ->
+            Nothing
+
+
+type alias NeighbouringVotes =
+    { previous : Maybe Vote
+    , next : Maybe Vote
+    }
+
+
 
 ---- VIEW ----
 
@@ -453,12 +483,7 @@ view : Model -> Html Msg
 view model =
     case model.votes of
         Success votes ->
-            case timeOrderedVotes votes of
-                Just votes_ ->
-                    viewVotes votes_
-
-                Nothing ->
-                    div [] [ text "No votes available." ]
+            viewVotes votes
 
         Failure error ->
             div [] [ "Error loading data: " ++ toString error |> text ]
@@ -470,56 +495,49 @@ view model =
             div [] [ text "Loading..." ]
 
 
-viewVotes : SelectList Vote -> Html Msg
+viewVotes : Votes -> Html Msg
 viewVotes votes =
-    let
-        currentVote =
-            SelectList.selected votes
+    case ( selectedVote votes, neighbouringVotes votes ) of
+        ( Just current, Just { previous, next } ) ->
+            let
+                previousVoteButton =
+                    voteNavigationButton previous "<"
 
-        previousVote =
-            SelectList.before votes
-                |> List.reverse
-                |> List.head
+                nextVoteButton =
+                    voteNavigationButton next ">"
 
-        nextVote =
-            SelectList.after votes
-                |> List.head
+                voteNavigationButton =
+                    \maybeVote ->
+                        \icon ->
+                            case maybeVote of
+                                Just { id } ->
+                                    button [ onClick (ShowVote id) ] [ text icon ]
 
-        previousVoteButton =
-            voteNavigationButton previousVote "<"
+                                Nothing ->
+                                    span [] []
+            in
+            div []
+                [ div []
+                    [ "Current vote: "
+                        ++ current.policyTitle
+                        ++ " | "
+                        ++ current.text
+                        ++ " | "
+                        ++ Date.Extra.toFormattedString "ddd MMMM, y" current.date
+                        |> text
+                    ]
+                , div []
+                    [ previousVoteButton, nextVoteButton ]
+                , Svg.svg
+                    [ width 1000
+                    , height 800
+                    , id "d3-simulation"
+                    ]
+                    []
+                ]
 
-        nextVoteButton =
-            voteNavigationButton nextVote ">"
-
-        voteNavigationButton =
-            \maybeVote ->
-                \icon ->
-                    case maybeVote of
-                        Just { id } ->
-                            button [ onClick (ShowVote id) ] [ text icon ]
-
-                        Nothing ->
-                            span [] []
-    in
-    div []
-        [ div []
-            [ "Current vote: "
-                ++ currentVote.policyTitle
-                ++ " | "
-                ++ currentVote.text
-                ++ " | "
-                ++ Date.Extra.toFormattedString "ddd MMMM, y" currentVote.date
-                |> text
-            ]
-        , div []
-            [ previousVoteButton, nextVoteButton ]
-        , Svg.svg
-            [ width 1000
-            , height 800
-            , id "d3-simulation"
-            ]
-            []
-        ]
+        _ ->
+            div [] [ text "No votes available." ]
 
 
 
