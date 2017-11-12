@@ -45,50 +45,47 @@ partyColour : VoteEvent -> String
 partyColour event =
     let
         party =
-            Maybe.map String.toLower event.party
+            String.toLower event.party
 
         labour =
             "#DC241f"
     in
     -- All colours obtained from Wikipedia.
     case party of
-        Just "labour" ->
+        "labour" ->
             labour
 
-        Just "labour/co-operative" ->
+        "labour/co-operative" ->
             labour
 
-        Just "conservative" ->
+        "conservative" ->
             "#0087DC"
 
-        Just "liberal democrat" ->
+        "liberal democrat" ->
             "#FAA61A"
 
-        Just "scottish national party" ->
+        "scottish national party" ->
             "#FEF987"
 
-        Just "dup" ->
+        "dup" ->
             "#D46A4C"
 
-        Just "sinn féin" ->
+        "sinn féin" ->
             "#008800"
 
-        Just "plaid cymru" ->
+        "plaid cymru" ->
             "#008142"
 
-        Just "green" ->
+        "green" ->
             "#6AB023"
 
-        Just "speaker" ->
+        "speaker" ->
             "black"
 
-        Just "independent" ->
+        "independent" ->
             "grey"
 
-        Nothing ->
-            "black"
-
-        Just unknown ->
+        unknown ->
             let
                 log =
                     Debug.log "Unhandled party: " unknown
@@ -131,7 +128,7 @@ type VoteId
 type alias VoteEvent =
     { personId : Int
     , name : String
-    , party : Maybe String
+    , party : String
     , option : VoteOption
     }
 
@@ -285,7 +282,7 @@ voteEventDecoder =
     D.map4 VoteEvent
         (D.field "person_id" D.int)
         (D.field "name" D.string)
-        (D.field "party" (D.nullable D.string))
+        (D.field "party" D.string)
         (D.field "option" voteOptionDecoder)
 
 
