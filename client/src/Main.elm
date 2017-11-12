@@ -17,11 +17,11 @@ import SelectList exposing (SelectList)
 -- PORTS --
 
 
-port graphData : E.Value -> Cmd msg
+port chartData : E.Value -> Cmd msg
 
 
-graphDataValue : Vote -> E.Value
-graphDataValue vote =
+chartDataValue : Vote -> E.Value
+chartDataValue vote =
     case vote.voteEvents of
         Success events ->
             E.list (List.map voteEventValue events)
@@ -99,7 +99,7 @@ partyColour event =
 
 type alias Model =
     { votes : WebData Votes
-    , graphVoteId : Maybe VoteId
+    , chartVoteId : Maybe VoteId
     , voteInput : String
     }
 
@@ -143,7 +143,7 @@ type VoteOption
 init : ( Model, Cmd Msg )
 init =
     ( { votes = NotAsked
-      , graphVoteId = Nothing
+      , chartVoteId = Nothing
       , voteInput = ""
       }
     , getInitialVotes
@@ -390,8 +390,8 @@ handleVoteStateChange model =
                 Just vote ->
                     case vote.voteEvents of
                         Success voteEvents ->
-                            ( { model | graphVoteId = Just vote.id }
-                            , sendGraphData vote
+                            ( { model | chartVoteId = Just vote.id }
+                            , sendChartData vote
                             )
 
                         NotAsked ->
@@ -417,9 +417,9 @@ selectedVote { selected, data } =
     Dict.get selected data
 
 
-sendGraphData : Vote -> Cmd msg
-sendGraphData vote =
-    graphDataValue vote |> graphData
+sendChartData : Vote -> Cmd msg
+sendChartData vote =
+    chartDataValue vote |> chartData
 
 
 timeOrderedVotes : Votes -> Maybe (SelectList Vote)

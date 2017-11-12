@@ -146,7 +146,7 @@ class BubbleChart {
 
 let chart = null;
 
-app.ports.graphData.subscribe(data => {
+app.ports.chartData.subscribe(data => {
   if (!chart) {
     chart = new BubbleChart('#d3-simulation');
   }
