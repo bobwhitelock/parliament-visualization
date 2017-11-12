@@ -102,6 +102,7 @@ partyColour event =
 
 type alias Model =
     { votes : WebData Votes
+    , graphVoteId : Maybe VoteId
     , voteInput : String
     }
 
@@ -145,6 +146,7 @@ type VoteOption
 init : ( Model, Cmd Msg )
 init =
     ( { votes = NotAsked
+      , graphVoteId = Nothing
       , voteInput = ""
       }
     , getInitialVotes
@@ -322,7 +324,6 @@ voteOptionDecoder =
 
 type Msg
     = InitialVotesResponse (WebData Votes)
-    | RequestVoteEvents
     | VoteEventsResponse VoteId (WebData (List VoteEvent))
     | VoteChanged String
     | ShowVote VoteId
@@ -332,63 +333,88 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         InitialVotesResponse response ->
-            let
-                cmd =
-                    case response of
-                        Success votes ->
-                            selectedVote votes
-                                |> Maybe.map sendGraphData
-                                |> Maybe.withDefault Cmd.none
-
-                        _ ->
-                            Cmd.none
-            in
-            ( { model | votes = response }, cmd )
-
-        RequestVoteEvents ->
-            let
-                id =
-                    String.toInt model.voteInput
-                        |> Result.toMaybe
-                        |> Maybe.map VoteId
-            in
-            case ( id, model.votes ) of
-                ( Just id_, Success votes ) ->
-                    ( model, getEventsForVote id_ )
+            case response of
+                Success votes ->
+                    handleVoteStateChange model votes.selected (Success votes)
 
                 _ ->
                     model ! []
 
         VoteEventsResponse voteId response ->
-            let
-                votes =
-                    case model.votes of
-                        Success { selected, data } ->
+            case model.votes of
+                Success { selected, data } ->
+                    let
+                        newVotes =
                             Votes selected
                                 (Dict.update
                                     voteId
                                     (Maybe.map (\vote -> { vote | voteEvents = response }))
                                     data
                                 )
-                                |> Success
+                    in
+                    handleVoteStateChange model selected (Success newVotes)
 
-                        -- Initial data didn't load, so shouldn't receive and
-                        -- can't do anything with this response.
-                        otherWebData ->
-                            otherWebData
-            in
-            { model | votes = votes } ! []
+                _ ->
+                    model ! []
 
         VoteChanged input ->
             { model | voteInput = input } ! []
 
-        ShowVote voteId ->
-            case model.votes of
-                Success votes ->
-                    { model | votes = Votes voteId votes.data |> Success } ! []
+        ShowVote newVoteId ->
+            handleVoteStateChange model newVoteId model.votes
 
-                _ ->
-                    model ! []
+
+{-|
+
+    Handle in a standard way updating model and making HTTP requests/sending
+    graph data through port, when either selected vote or Votes data changes.
+
+    XXX Improve this.
+
+-}
+handleVoteStateChange : Model -> VoteId -> WebData Votes -> ( Model, Cmd Msg )
+handleVoteStateChange model voteToShowId newVotes =
+    let
+        modelWithNewVotes =
+            { model | votes = newVotes }
+    in
+    case newVotes of
+        Success newVotes_ ->
+            let
+                newVotesWithNewVoteToShow =
+                    Votes voteToShowId newVotes_.data
+
+                newVote =
+                    selectedVote newVotes_
+
+                newModel =
+                    { modelWithNewVotes | votes = Success newVotesWithNewVoteToShow }
+            in
+            case newVote of
+                Just vote ->
+                    case vote.voteEvents of
+                        Success voteEvents ->
+                            ( { newModel | graphVoteId = Just vote.id }
+                            , sendGraphData vote
+                            )
+
+                        NotAsked ->
+                            newModel ! [ getEventsForVote vote.id ]
+
+                        Failure _ ->
+                            -- XXX Handle this somewhere?
+                            newModel ! []
+
+                        Loading ->
+                            -- XXX Handle this somewhere?
+                            newModel ! []
+
+                Nothing ->
+                    -- New vote does not exist.
+                    newModel ! []
+
+        _ ->
+            modelWithNewVotes ! []
 
 
 selectedVote : Votes -> Maybe Vote
@@ -491,15 +517,6 @@ viewVotes votes =
             ]
         , previousVoteButton
         , nextVoteButton
-        , Html.form
-            [ onSubmit RequestVoteEvents ]
-            [ input
-                [ onInput VoteChanged
-                , placeholder "Enter vote ID to get"
-                ]
-                []
-            , button [] [ text "Request" ]
-            ]
         ]
 
 
