@@ -332,13 +332,12 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        InitialVotesResponse response ->
-            case response of
-                Success votes ->
-                    handleVoteStateChange model votes.selected (Success votes)
-
-                _ ->
-                    model ! []
+        InitialVotesResponse votes ->
+            let
+                newModel =
+                    { model | votes = votes }
+            in
+            handleVoteStateChange newModel
 
         VoteEventsResponse voteId response ->
             case model.votes of
@@ -351,8 +350,12 @@ update msg model =
                                     (Maybe.map (\vote -> { vote | voteEvents = response }))
                                     data
                                 )
+                                |> Success
+
+                        newModel =
+                            { model | votes = newVotes }
                     in
-                    handleVoteStateChange model selected (Success newVotes)
+                    handleVoteStateChange newModel
 
                 _ ->
                     model ! []
@@ -361,7 +364,19 @@ update msg model =
             { model | voteInput = input } ! []
 
         ShowVote newVoteId ->
-            handleVoteStateChange model newVoteId model.votes
+            case model.votes of
+                Success { data } ->
+                    let
+                        newVotes =
+                            Votes newVoteId data |> Success
+
+                        newModel =
+                            { model | votes = newVotes }
+                    in
+                    handleVoteStateChange newModel
+
+                _ ->
+                    model ! []
 
 
 {-|
@@ -369,52 +384,35 @@ update msg model =
     Handle in a standard way updating model and making HTTP requests/sending
     graph data through port, when either selected vote or Votes data changes.
 
-    XXX Improve this.
-
 -}
-handleVoteStateChange : Model -> VoteId -> WebData Votes -> ( Model, Cmd Msg )
-handleVoteStateChange model voteToShowId newVotes =
-    let
-        modelWithNewVotes =
-            { model | votes = newVotes }
-    in
-    case newVotes of
-        Success newVotes_ ->
-            let
-                newVotesWithNewVoteToShow =
-                    Votes voteToShowId newVotes_.data
-
-                newVote =
-                    selectedVote newVotes_
-
-                newModel =
-                    { modelWithNewVotes | votes = Success newVotesWithNewVoteToShow }
-            in
-            case newVote of
+handleVoteStateChange : Model -> ( Model, Cmd Msg )
+handleVoteStateChange model =
+    case model.votes of
+        Success votes ->
+            case selectedVote votes of
                 Just vote ->
                     case vote.voteEvents of
                         Success voteEvents ->
-                            ( { newModel | graphVoteId = Just vote.id }
+                            ( { model | graphVoteId = Just vote.id }
                             , sendGraphData vote
                             )
 
                         NotAsked ->
-                            newModel ! [ getEventsForVote vote.id ]
+                            model ! [ getEventsForVote vote.id ]
 
                         Failure _ ->
                             -- XXX Handle this somewhere?
-                            newModel ! []
+                            model ! []
 
                         Loading ->
                             -- XXX Handle this somewhere?
-                            newModel ! []
+                            model ! []
 
                 Nothing ->
-                    -- New vote does not exist.
-                    newModel ! []
+                    model ! []
 
         _ ->
-            modelWithNewVotes ! []
+            model ! []
 
 
 selectedVote : Votes -> Maybe Vote
