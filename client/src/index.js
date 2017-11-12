@@ -148,7 +148,7 @@ let chart = null;
 
 app.ports.graphData.subscribe(data => {
   if (!chart) {
-    chart = new BubbleChart('#d3-simulation', data);
+    chart = new BubbleChart('#d3-simulation');
   }
   chart.setNodes(data);
 });
