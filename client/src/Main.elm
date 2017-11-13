@@ -56,6 +56,12 @@ partyColour event =
 
         labour =
             "#DC241f"
+
+        speaker =
+            "black"
+
+        independent =
+            "grey"
     in
     -- All colours obtained from Wikipedia.
     case party of
@@ -86,17 +92,44 @@ partyColour event =
         "green" ->
             "#6AB023"
 
+        "social democratic and labour party" ->
+            "#99FF66"
+
+        "alliance" ->
+            "#F6CB2F"
+
+        "respect" ->
+            "red"
+
+        "uup" ->
+            "#9999FF"
+
+        "ukip" ->
+            "#70147A"
+
+        "ukup" ->
+            "#90C"
+
         "speaker" ->
-            "black"
+            speaker
+
+        "deputy speaker" ->
+            speaker
 
         "independent" ->
-            "grey"
+            independent
+
+        "independent labour" ->
+            independent
+
+        "independent conservative" ->
+            independent
+
+        "independent ulster unionist" ->
+            independent
 
         unknown ->
-            let
-                log =
-                    Debug.log "Unhandled party: " unknown
-            in
+            -- Should never occur since handling all parties in current data.
             "rebeccapurple"
 
 
