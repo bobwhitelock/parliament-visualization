@@ -1,8 +1,7 @@
 port module Main exposing (..)
 
-import Date exposing (Date)
 import Date.Extra
-import EveryDict as Dict exposing (EveryDict)
+import EveryDict as Dict
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
@@ -10,12 +9,13 @@ import Http
 import Json.Decode as D
 import Json.Encode as E
 import List.Extra
-import Maybe.Extra
 import RemoteData exposing (RemoteData(..), WebData)
-import SelectList exposing (SelectList)
 import Svg
 import Tachyons exposing (classes, tachyons)
 import Tachyons.Classes exposing (..)
+import Vote exposing (Vote)
+import VoteEvent exposing (VoteEvent)
+import Votes exposing (Votes)
 
 
 -- PORTS --
@@ -27,158 +27,16 @@ port chartData : E.Value -> Cmd msg
 port personNodeHovered : (Int -> msg) -> Sub msg
 
 
-chartDataValue : Vote -> E.Value
-chartDataValue vote =
-    case vote.voteEvents of
-        Success events ->
-            E.list (List.map voteEventValue events)
-
-        _ ->
-            -- XXX Handle this better.
-            E.null
-
-
-voteEventValue : VoteEvent -> E.Value
-voteEventValue event =
-    E.object
-        [ ( "personId", E.int event.personId )
-        , ( "name", E.string event.name )
-        , ( "partyColour", partyColour event |> E.string )
-        , ( "option", toString event.option |> String.toLower |> E.string )
-        ]
-
-
-partyColour : VoteEvent -> String
-partyColour event =
-    let
-        party =
-            String.toLower event.party
-
-        labour =
-            "#DC241f"
-
-        speaker =
-            "black"
-
-        independent =
-            "grey"
-    in
-    -- All colours obtained from Wikipedia.
-    case party of
-        "labour" ->
-            labour
-
-        "labour/co-operative" ->
-            labour
-
-        "conservative" ->
-            "#0087DC"
-
-        "liberal democrat" ->
-            "#FAA61A"
-
-        "scottish national party" ->
-            "#FEF987"
-
-        "dup" ->
-            "#D46A4C"
-
-        "sinn féin" ->
-            "#008800"
-
-        "plaid cymru" ->
-            "#008142"
-
-        "green" ->
-            "#6AB023"
-
-        "social democratic and labour party" ->
-            "#99FF66"
-
-        "alliance" ->
-            "#F6CB2F"
-
-        "respect" ->
-            "red"
-
-        "uup" ->
-            "#9999FF"
-
-        "ukip" ->
-            "#70147A"
-
-        "ukup" ->
-            "#90C"
-
-        "speaker" ->
-            speaker
-
-        "deputy speaker" ->
-            speaker
-
-        "independent" ->
-            independent
-
-        "independent labour" ->
-            independent
-
-        "independent conservative" ->
-            independent
-
-        "independent ulster unionist" ->
-            independent
-
-        unknown ->
-            -- Should never occur since handling all parties in current data.
-            "rebeccapurple"
-
-
 
 ---- MODEL ----
 
 
 type alias Model =
     { votes : WebData Votes
-    , chartVoteId : Maybe VoteId
+    , chartVoteId : Maybe Vote.Id
     , voteInput : String
     , hoveredPersonId : Maybe Int
     }
-
-
-type alias Votes =
-    { selected : VoteId
-    , data : EveryDict VoteId Vote
-    }
-
-
-type alias Vote =
-    { id : VoteId
-    , policyTitle : String
-    , text : String
-    , actionsYes : Maybe String
-    , actionsNo : Maybe String
-    , date : Date
-    , voteEvents : WebData (List VoteEvent)
-    }
-
-
-type VoteId
-    = VoteId Int
-
-
-type alias VoteEvent =
-    { personId : Int
-    , name : String
-    , party : String
-    , option : VoteOption
-    }
-
-
-type VoteOption
-    = Yes
-    | No
-    | Both
-    | Absent
 
 
 init : ( Model, Cmd Msg )
@@ -194,167 +52,9 @@ init =
 
 getInitialVotes : Cmd Msg
 getInitialVotes =
-    Http.get "/votes" initialVotesDecoder
+    Http.get "/votes" Votes.decoder
         |> RemoteData.sendRequest
         |> Cmd.map InitialVotesResponse
-
-
-getEventsForVote : VoteId -> Cmd Msg
-getEventsForVote voteId =
-    let
-        (VoteId id) =
-            voteId
-
-        path =
-            "/vote-events/" ++ toString id
-    in
-    Http.get path (D.list voteEventDecoder)
-        |> RemoteData.sendRequest
-        |> Cmd.map (VoteEventsResponse voteId)
-
-
-initialVotesDecoder : D.Decoder Votes
-initialVotesDecoder =
-    let
-        createInitialVotes =
-            \( votes, latestVote ) ->
-                let
-                    -- Every Vote should have a date, but need to filter
-                    -- out any which somehow didn't to ensure this.
-                    votesWithDates =
-                        Maybe.Extra.values votes
-                in
-                case latestVote of
-                    Just latest ->
-                        Votes latest.id
-                            (createVotesDict votesWithDates
-                                |> Dict.insert latest.id latest
-                            )
-                            |> D.succeed
-
-                    Nothing ->
-                        D.fail "Latest vote has no date!"
-
-        createVotesDict =
-            \votes ->
-                List.map
-                    (\vote -> ( vote.id, vote ))
-                    votes
-                    |> Dict.fromList
-    in
-    D.map2 (,)
-        (D.field "votes" (D.list voteWithoutEventsDecoder))
-        (D.field "latestVote" voteWithEventsDecoder)
-        |> D.andThen createInitialVotes
-
-
-voteWithoutEventsDecoder : D.Decoder (Maybe Vote)
-voteWithoutEventsDecoder =
-    let
-        initialVoteState =
-            \id ->
-                \policyTitle ->
-                    \text ->
-                        \actionsYes ->
-                            \actionsNo ->
-                                \date ->
-                                    case Date.Extra.fromIsoString date of
-                                        Just date_ ->
-                                            Vote
-                                                id
-                                                policyTitle
-                                                text
-                                                actionsYes
-                                                actionsNo
-                                                date_
-                                                NotAsked
-                                                |> Just
-
-                                        Nothing ->
-                                            Nothing
-    in
-    D.map6 initialVoteState
-        (D.field "id" D.int |> D.map VoteId)
-        (D.field "policy_title" D.string)
-        (D.field "text" D.string)
-        (D.field "actions_yes" (D.nullable D.string))
-        (D.field "actions_no" (D.nullable D.string))
-        (D.field "date" D.string)
-
-
-voteWithEventsDecoder : D.Decoder (Maybe Vote)
-voteWithEventsDecoder =
-    -- XXX de-duplicate this and above.
-    let
-        createVote =
-            \id ->
-                \policyTitle ->
-                    \text ->
-                        \actionsYes ->
-                            \actionsNo ->
-                                \date ->
-                                    \voteEvents ->
-                                        case Date.Extra.fromIsoString date of
-                                            Just date_ ->
-                                                Vote
-                                                    id
-                                                    policyTitle
-                                                    text
-                                                    actionsYes
-                                                    actionsNo
-                                                    date_
-                                                    voteEvents
-                                                    |> Just
-
-                                            Nothing ->
-                                                Nothing
-    in
-    D.map7 createVote
-        (D.field "id" D.int |> D.map VoteId)
-        (D.field "policy_title" D.string)
-        (D.field "text" D.string)
-        (D.field "actions_yes" (D.nullable D.string))
-        (D.field "actions_no" (D.nullable D.string))
-        (D.field "date" D.string)
-        (D.field "voteEvents" (D.list voteEventDecoder |> D.map Success))
-
-
-voteEventDecoder : D.Decoder VoteEvent
-voteEventDecoder =
-    D.map4 VoteEvent
-        (D.field "person_id" D.int)
-        (D.field "name" D.string)
-        (D.field "party" D.string)
-        (D.field "option" voteOptionDecoder)
-
-
-voteOptionDecoder : D.Decoder VoteOption
-voteOptionDecoder =
-    D.string
-        |> D.andThen
-            (\option ->
-                case option of
-                    "aye" ->
-                        D.succeed Yes
-
-                    "tellaye" ->
-                        D.succeed Yes
-
-                    "no" ->
-                        D.succeed No
-
-                    "tellno" ->
-                        D.succeed No
-
-                    "both" ->
-                        D.succeed Both
-
-                    "absent" ->
-                        D.succeed Absent
-
-                    _ ->
-                        D.fail ("Unknown vote option: " ++ option)
-            )
 
 
 
@@ -363,9 +63,9 @@ voteOptionDecoder =
 
 type Msg
     = InitialVotesResponse (WebData Votes)
-    | VoteEventsResponse VoteId (WebData (List VoteEvent))
+    | VoteEventsResponse Vote.Id (WebData (List VoteEvent))
     | VoteChanged String
-    | ShowVote VoteId
+    | ShowVote Vote.Id
     | PersonNodeHovered Int
 
 
@@ -432,7 +132,7 @@ handleVoteStateChange : Model -> ( Model, Cmd Msg )
 handleVoteStateChange model =
     case model.votes of
         Success votes ->
-            case selectedVote votes of
+            case Votes.selected votes of
                 Just vote ->
                     case vote.voteEvents of
                         Success voteEvents ->
@@ -472,66 +172,23 @@ handleVoteStateChange model =
             model ! []
 
 
-selectedVote : Votes -> Maybe Vote
-selectedVote { selected, data } =
-    Dict.get selected data
+getEventsForVote : Vote.Id -> Cmd Msg
+getEventsForVote voteId =
+    let
+        (Vote.Id id) =
+            voteId
+
+        path =
+            "/vote-events/" ++ toString id
+    in
+    Http.get path (D.list VoteEvent.decoder)
+        |> RemoteData.sendRequest
+        |> Cmd.map (VoteEventsResponse voteId)
 
 
 sendChartData : Vote -> Cmd msg
 sendChartData vote =
-    chartDataValue vote |> chartData
-
-
-timeOrderedVotes : Votes -> Maybe (SelectList Vote)
-timeOrderedVotes { selected, data } =
-    -- XXX Remove use of SelectList here; not really necessary?
-    let
-        compare =
-            \vote1 -> \vote2 -> Date.Extra.compare vote1.date vote2.date
-
-        orderedVotes =
-            Dict.toList data
-                |> List.map Tuple.second
-                |> List.sortWith compare
-    in
-    -- XXX Use SelectList.fromList once exists.
-    case ( List.head orderedVotes, List.tail orderedVotes ) of
-        ( Just head, Just tail ) ->
-            SelectList.fromLists [] head tail
-                |> SelectList.select (\vote -> vote.id == selected)
-                |> Just
-
-        _ ->
-            Nothing
-
-
-neighbouringVotes : Votes -> Maybe NeighbouringVotes
-neighbouringVotes votes =
-    case timeOrderedVotes votes of
-        Just orderedVotes ->
-            let
-                previousVote =
-                    SelectList.before orderedVotes
-                        |> List.reverse
-                        |> List.head
-
-                nextVote =
-                    SelectList.after orderedVotes
-                        |> List.head
-            in
-            Just
-                { previous = previousVote
-                , next = nextVote
-                }
-
-        Nothing ->
-            Nothing
-
-
-type alias NeighbouringVotes =
-    { previous : Maybe Vote
-    , next : Maybe Vote
-    }
+    Vote.chartDataValue vote |> chartData
 
 
 
@@ -556,7 +213,7 @@ view model =
 
 viewVotes : Maybe Int -> Votes -> Html Msg
 viewVotes hoveredPersonId votes =
-    case ( selectedVote votes, neighbouringVotes votes ) of
+    case ( Votes.selected votes, Votes.neighbouringVotes votes ) of
         ( Just current, Just { previous, next } ) ->
             let
                 previousVoteButton =
