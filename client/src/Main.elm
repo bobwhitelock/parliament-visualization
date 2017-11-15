@@ -9,6 +9,7 @@ import Http
 import Json.Decode as D
 import Json.Encode as E
 import List.Extra
+import Maybe.Extra
 import RemoteData exposing (RemoteData(..), WebData)
 import Svg
 import Tachyons exposing (classes, tachyons)
@@ -134,11 +135,25 @@ handleVoteStateChange model =
         Success votes ->
             case Votes.selected votes of
                 Just vote ->
+                    let
+                        { previous, next } =
+                            Votes.neighbouringVotes votes
+                                |> Maybe.withDefault
+                                    { previous = Nothing, next = Nothing }
+
+                        maybeCmdToGet =
+                            \maybeVote ->
+                                Maybe.map cmdToGetEvents maybeVote
+                                    |> Maybe.Extra.join
+
+                        neighbouringVotesToGet =
+                            Maybe.Extra.values
+                                [ maybeCmdToGet previous, maybeCmdToGet next ]
+                    in
                     case vote.voteEvents of
                         Success voteEvents ->
-                            ( { model | chartVoteId = Just vote.id }
-                            , sendChartData vote
-                            )
+                            { model | chartVoteId = Just vote.id }
+                                ! (sendChartData vote :: neighbouringVotesToGet)
 
                         NotAsked ->
                             let
@@ -156,20 +171,28 @@ handleVoteStateChange model =
                                 newModel =
                                     { model | votes = newVotes }
                             in
-                            newModel ! [ getEventsForVote vote.id ]
+                            newModel ! (getEventsForVote vote.id :: neighbouringVotesToGet)
 
                         Failure _ ->
                             -- XXX Handle this somewhere?
-                            model ! []
+                            model ! neighbouringVotesToGet
 
                         Loading ->
-                            model ! []
+                            model ! neighbouringVotesToGet
 
                 Nothing ->
                     model ! []
 
         _ ->
             model ! []
+
+
+cmdToGetEvents : Vote -> Maybe (Cmd Msg)
+cmdToGetEvents vote =
+    if RemoteData.isNotAsked vote.voteEvents then
+        getEventsForVote vote.id |> Just
+    else
+        Nothing
 
 
 getEventsForVote : Vote.Id -> Cmd Msg
