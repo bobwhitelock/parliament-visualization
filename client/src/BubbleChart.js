@@ -137,6 +137,8 @@ export default class BubbleChart {
 
     // Reset the alpha value and restart the simulation
     this.simulation.alpha(1).restart();
+
+    window.setTimeout(() => this.app.ports.chartDataLoaded.send(0), 1000);
   }
 
   optionPosition(d) {

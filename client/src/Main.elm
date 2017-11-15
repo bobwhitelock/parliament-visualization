@@ -28,6 +28,9 @@ port chartData : E.Value -> Cmd msg
 port personNodeHovered : (Int -> msg) -> Sub msg
 
 
+port chartDataLoaded : (Int -> msg) -> Sub msg
+
+
 
 ---- MODEL ----
 
@@ -68,6 +71,7 @@ type Msg
     | VoteChanged String
     | ShowVote Vote.Id
     | PersonNodeHovered Int
+    | ChartDataLoaded Int
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -122,19 +126,9 @@ update msg model =
         PersonNodeHovered personId ->
             { model | hoveredPersonId = Just personId } ! []
 
-
-{-|
-
-    Handle in a standard way updating model and making HTTP requests/sending
-    graph data through port, when either selected vote or Votes data changes.
-
--}
-handleVoteStateChange : Model -> ( Model, Cmd Msg )
-handleVoteStateChange model =
-    case model.votes of
-        Success votes ->
-            case Votes.selected votes of
-                Just vote ->
+        ChartDataLoaded _ ->
+            case model.votes of
+                Success votes ->
                     let
                         { previous, next } =
                             Votes.neighbouringVotes votes
@@ -150,10 +144,28 @@ handleVoteStateChange model =
                             Maybe.Extra.values
                                 [ maybeCmdToGet previous, maybeCmdToGet next ]
                     in
+                    model ! neighbouringVotesToGet
+
+                _ ->
+                    model ! []
+
+
+{-|
+
+    Handle in a standard way updating model and making HTTP requests/sending
+    graph data through port, when either selected vote or Votes data changes.
+
+-}
+handleVoteStateChange : Model -> ( Model, Cmd Msg )
+handleVoteStateChange model =
+    case model.votes of
+        Success votes ->
+            case Votes.selected votes of
+                Just vote ->
                     case vote.voteEvents of
                         Success voteEvents ->
                             { model | chartVoteId = Just vote.id }
-                                ! (sendChartData vote :: neighbouringVotesToGet)
+                                ! [ sendChartData vote ]
 
                         NotAsked ->
                             let
@@ -171,14 +183,14 @@ handleVoteStateChange model =
                                 newModel =
                                     { model | votes = newVotes }
                             in
-                            newModel ! (getEventsForVote vote.id :: neighbouringVotesToGet)
+                            newModel ! [ getEventsForVote vote.id ]
 
                         Failure _ ->
                             -- XXX Handle this somewhere?
-                            model ! neighbouringVotesToGet
+                            model ! []
 
                         Loading ->
-                            model ! neighbouringVotesToGet
+                            model ! []
 
                 Nothing ->
                     model ! []
@@ -320,7 +332,10 @@ viewVotes hoveredPersonId votes =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    personNodeHovered PersonNodeHovered
+    Sub.batch
+        [ personNodeHovered PersonNodeHovered
+        , chartDataLoaded ChartDataLoaded
+        ]
 
 
 
