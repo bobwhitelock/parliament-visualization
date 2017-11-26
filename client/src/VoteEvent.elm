@@ -1,4 +1,4 @@
-module VoteEvent exposing (VoteEvent, decoder, encode)
+module VoteEvent exposing (VoteEvent, decoder, encode, isSpeaker, partyColour)
 
 import Json.Decode as D
 import Json.Encode as E
@@ -30,6 +30,23 @@ encode event =
         , ( "partyColour", partyColour event |> E.string )
         , ( "option", toString event.option |> String.toLower |> E.string )
         ]
+
+
+isSpeaker : VoteEvent -> Bool
+isSpeaker event =
+    let
+        party =
+            String.toLower event.party
+    in
+    case party of
+        "speaker" ->
+            True
+
+        "deputy speaker" ->
+            True
+
+        _ ->
+            False
 
 
 partyColour : VoteEvent -> String

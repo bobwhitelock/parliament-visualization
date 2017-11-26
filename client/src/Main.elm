@@ -296,9 +296,11 @@ viewVotes hoveredPersonId votes =
                 ]
                 [ tachyons.css
                 , div [ classes [ lh_copy ] ]
-                    [ currentVoteInfo current
+                    [ div [ classes [ fl, w_80 ] ]
+                        [ currentVoteInfo current
+                        , div [] [ previousVoteButton, nextVoteButton ]
+                        ]
                     , hoveredPersonInfo hoveredPersonEvent
-                    , div [] [ previousVoteButton, nextVoteButton ]
                     ]
                 , div [ classes [ center, mw_100 ] ] [ chart ]
                 ]
@@ -324,19 +326,82 @@ currentVoteInfo currentVote =
 hoveredPersonInfo : Maybe VoteEvent -> Html msg
 hoveredPersonInfo event =
     let
-        hoveredPersonText =
-            case event of
-                Just event_ ->
-                    event_.name
-                        ++ " | "
-                        ++ event_.party
-                        ++ " | "
-                        ++ toString event_.option
-
-                Nothing ->
-                    "Nobody"
+        info =
+            Maybe.map personInfo event
+                |> Maybe.withDefault (text "")
     in
-    div [] [ "Hovered over: " ++ hoveredPersonText |> text ]
+    div
+        [ classes
+            [ fr
+            , br2
+            , bg_white
+            , Tachyons.Classes.h5
+            , w5
+            , f3
+            , tc
+            ]
+        ]
+        [ info ]
+
+
+personInfo : VoteEvent -> Html msg
+personInfo event =
+    let
+        classList =
+            Maybe.Extra.values
+                [ Just h_100
+                , if VoteEvent.isSpeaker event then
+                    -- Showing speaker's party colour as black, so show text as
+                    -- white so can see it.
+                    Just white
+                  else
+                    Nothing
+                ]
+    in
+    div
+        [ classes classList
+        , style [ ( "background-color", VoteEvent.partyColour event ) ]
+        ]
+        [ div [] [ text event.name ]
+        , personImage event
+        , div [] [ text event.party ]
+        ]
+
+
+personImage : VoteEvent -> Html msg
+personImage event =
+    let
+        primaryImageUrl =
+            imageUrl ".jpeg"
+
+        secondaryImageUrl =
+            imageUrl ".jpg"
+
+        imageOnError =
+            -- For some reason TWFY images mostly have a `jpeg` extension but
+            -- sometimes have `jpg`; if the former fails to load then attempt
+            -- to load the latter (see
+            -- https://stackoverflow.com/a/92819/2620402).
+            String.join ""
+                [ "this.onerror=null;this.src='"
+                , secondaryImageUrl
+                , "';"
+                ]
+
+        imageUrl =
+            \suffix ->
+                String.join ""
+                    [ "https://www.theyworkforyou.com/images/mps/"
+                    , toString event.personId
+                    , suffix
+                    ]
+    in
+    img
+        [ src primaryImageUrl
+        , height 100
+        , attribute "onerror" imageOnError
+        ]
+        []
 
 
 
