@@ -12,6 +12,7 @@ import List.Extra
 import Maybe.Extra
 import RemoteData exposing (RemoteData(..), WebData)
 import Svg
+import Svg.Attributes
 import Tachyons exposing (classes, tachyons)
 import Tachyons.Classes exposing (..)
 import Vote exposing (Vote)
@@ -265,18 +266,6 @@ viewVotes hoveredPersonId votes =
                         _ ->
                             Nothing
 
-                hoveredPersonText =
-                    case hoveredPersonEvent of
-                        Just event ->
-                            event.name
-                                ++ " | "
-                                ++ event.party
-                                ++ " | "
-                                ++ toString event.option
-
-                        Nothing ->
-                            "Nobody"
-
                 chartClasses =
                     if RemoteData.isLoading current.voteEvents then
                         [ o_70 ]
@@ -289,29 +278,65 @@ viewVotes hoveredPersonId votes =
                             [ width 1000
                             , height 800
                             , id "d3-simulation"
+                            , Svg.Attributes.class "db center"
                             ]
                             []
                         ]
             in
-            div []
-                [ tachyons.css
-                , div []
-                    [ "Current vote: "
-                        ++ current.policyTitle
-                        ++ " | "
-                        ++ current.text
-                        ++ " | "
-                        ++ Date.Extra.toFormattedString "ddd MMMM, y" current.date
-                        |> text
+            section
+                [ classes
+                    [ vh_100
+                    , mw9
+                    , center
+                    , bg_near_white
+                    , pa3
+                    , ph5_ns
+                    , helvetica
                     ]
-                , div [] [ "Hovered over: " ++ hoveredPersonText |> text ]
-                , div []
-                    [ previousVoteButton, nextVoteButton ]
-                , chart
+                ]
+                [ tachyons.css
+                , div [ classes [ lh_copy ] ]
+                    [ currentVoteInfo current
+                    , hoveredPersonInfo hoveredPersonEvent
+                    , div [] [ previousVoteButton, nextVoteButton ]
+                    ]
+                , div [ classes [ center, mw_100 ] ] [ chart ]
                 ]
 
         _ ->
             div [] [ text "No votes available." ]
+
+
+currentVoteInfo : Vote -> Html msg
+currentVoteInfo currentVote =
+    div
+        []
+        [ "Current vote: "
+            ++ currentVote.policyTitle
+            ++ " | "
+            ++ currentVote.text
+            ++ " | "
+            ++ Date.Extra.toFormattedString "ddd MMMM, y" currentVote.date
+            |> text
+        ]
+
+
+hoveredPersonInfo : Maybe VoteEvent -> Html msg
+hoveredPersonInfo event =
+    let
+        hoveredPersonText =
+            case event of
+                Just event_ ->
+                    event_.name
+                        ++ " | "
+                        ++ event_.party
+                        ++ " | "
+                        ++ toString event_.option
+
+                Nothing ->
+                    "Nobody"
+    in
+    div [] [ "Hovered over: " ++ hoveredPersonText |> text ]
 
 
 
