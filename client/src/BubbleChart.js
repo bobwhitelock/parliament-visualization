@@ -103,6 +103,7 @@ export default class BubbleChart {
       .enter()
       .append('circle')
       .classed('bubble', true)
+      .classed('dim', true)
       .attr('r', 0)
       .attr('fill', function(d) {
         return d.colour;
