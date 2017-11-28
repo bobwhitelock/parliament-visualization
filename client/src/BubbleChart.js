@@ -5,11 +5,10 @@ const height = 800;
 
 const center = {x: width / 2, y: height / 2};
 
-const absent_or_both_position = {x: width / 2, y: height / 2};
 const positions = {
   yes: {x: width / 3, y: height / 2},
-  absent: absent_or_both_position,
-  both: absent_or_both_position,
+  absent: center,
+  both: center,
   no: {x: 2 * width / 3, y: height / 2},
 };
 
