@@ -4,6 +4,7 @@ import Date exposing (Date)
 import Date.Extra
 import Json.Decode as D
 import Json.Encode as E
+import List.Extra
 import RemoteData exposing (RemoteData(..), WebData)
 import VoteEvent exposing (VoteEvent)
 
@@ -32,6 +33,18 @@ chartDataValue vote =
         _ ->
             -- XXX Handle this better.
             E.null
+
+
+eventForPersonId : Vote -> Maybe Int -> Maybe VoteEvent
+eventForPersonId vote personId =
+    case ( vote.voteEvents, personId ) of
+        ( Success events, Just personId_ ) ->
+            List.Extra.find
+                (.personId >> (==) personId_)
+                events
+
+        _ ->
+            Nothing
 
 
 withoutEventsDecoder : D.Decoder (Maybe Vote)

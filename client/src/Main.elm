@@ -8,7 +8,6 @@ import Html.Events exposing (..)
 import Http
 import Json.Decode as D
 import Json.Encode as E
-import List.Extra
 import Maybe.Extra
 import RemoteData exposing (RemoteData(..), WebData)
 import Svg
@@ -257,14 +256,7 @@ viewVotes hoveredPersonId votes =
                                     span [] []
 
                 hoveredPersonEvent =
-                    case ( current.voteEvents, hoveredPersonId ) of
-                        ( Success events, Just personId ) ->
-                            List.Extra.find
-                                (.personId >> (==) personId)
-                                events
-
-                        _ ->
-                            Nothing
+                    Vote.eventForPersonId current hoveredPersonId
 
                 chartClasses =
                     if RemoteData.isLoading current.voteEvents then
