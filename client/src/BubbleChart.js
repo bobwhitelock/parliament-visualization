@@ -17,6 +17,7 @@ const forceStrength = 0.03;
 export default class BubbleChart {
   constructor(app, selector) {
     this.app = app;
+    this.svg = d3.select(selector);
 
     this.bubbles = null;
     this.nodes = null;
@@ -52,13 +53,6 @@ export default class BubbleChart {
     // Force simulation starts automatically, which we don't want as there aren't
     // any nodes yet.
     this.simulation.stop();
-
-    // Create a SVG element inside the provided selector with desired size.
-    this.svg = d3
-      .select(selector)
-      .append('svg')
-      .attr('width', width)
-      .attr('height', height);
   }
 
   // Charge function that is called for each node.  As part of the ManyBody
