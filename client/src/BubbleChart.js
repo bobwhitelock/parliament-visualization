@@ -92,8 +92,12 @@ export default class BubbleChart {
 
     this.bubbles.exit().remove();
 
+    // XXX Could de-duplicate these.
     const personNodeHovered = node =>
       this.app.ports.personNodeHovered.send(node.personId);
+
+    const personNodeClicked = node =>
+      this.app.ports.personNodeClicked.send(node.personId);
 
     // Create new circle elements each with class `bubble`.  There will be one
     // circle.bubble for each object in the nodes array.  Initially, their
@@ -112,7 +116,8 @@ export default class BubbleChart {
         return d3.rgb(d.colour).darker();
       })
       .attr('stroke-width', 2)
-      .on('mouseover', personNodeHovered);
+      .on('mouseover', personNodeHovered)
+      .on('click', personNodeClicked);
     // .on('mouseout', hideDetail);
 
     // Merge the original empty selection and the enter selection

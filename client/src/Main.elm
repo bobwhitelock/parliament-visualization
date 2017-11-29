@@ -28,6 +28,9 @@ port chartData : E.Value -> Cmd msg
 port personNodeHovered : (Int -> msg) -> Sub msg
 
 
+port personNodeClicked : (Int -> msg) -> Sub msg
+
+
 
 ---- MODEL ----
 
@@ -37,6 +40,7 @@ type alias Model =
     , chartVoteId : Maybe Vote.Id
     , voteInput : String
     , hoveredPersonId : Maybe Int
+    , selectedPersonId : Maybe Int
     }
 
 
@@ -46,6 +50,7 @@ init =
       , chartVoteId = Nothing
       , voteInput = ""
       , hoveredPersonId = Nothing
+      , selectedPersonId = Nothing
       }
     , getInitialVotes
     )
@@ -68,6 +73,7 @@ type Msg
     | VoteChanged String
     | ShowVote Vote.Id
     | PersonNodeHovered Int
+    | PersonNodeClicked Int
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -121,6 +127,9 @@ update msg model =
 
         PersonNodeHovered personId ->
             { model | hoveredPersonId = Just personId } ! []
+
+        PersonNodeClicked personId ->
+            { model | selectedPersonId = Just personId } ! []
 
 
 {-|
@@ -222,7 +231,7 @@ view : Model -> Html Msg
 view model =
     case model.votes of
         Success votes ->
-            viewVotes model.hoveredPersonId votes
+            viewVotes model.hoveredPersonId model.selectedPersonId votes
 
         Failure error ->
             div [] [ "Error loading data: " ++ toString error |> text ]
@@ -234,8 +243,8 @@ view model =
             div [] [ text "Loading..." ]
 
 
-viewVotes : Maybe Int -> Votes -> Html Msg
-viewVotes hoveredPersonId votes =
+viewVotes : Maybe Int -> Maybe Int -> Votes -> Html Msg
+viewVotes hoveredPersonId selectedPersonId votes =
     case ( Votes.selected votes, Votes.neighbouringVotes votes ) of
         ( Just current, Just { previous, next } ) ->
             let
@@ -255,8 +264,14 @@ viewVotes hoveredPersonId votes =
                                 Nothing ->
                                     span [] []
 
+                currentEventForPersonId =
+                    Vote.eventForPersonId current
+
                 hoveredPersonEvent =
-                    Vote.eventForPersonId current hoveredPersonId
+                    currentEventForPersonId hoveredPersonId
+
+                selectedPersonEvent =
+                    currentEventForPersonId selectedPersonId
 
                 chartClasses =
                     if RemoteData.isLoading current.voteEvents then
@@ -287,14 +302,19 @@ viewVotes hoveredPersonId votes =
                     ]
                 ]
                 [ tachyons.css
-                , div [ classes [ lh_copy ] ]
-                    [ div [ classes [ fl, w_80 ] ]
-                        [ currentVoteInfo current
-                        , div [] [ previousVoteButton, nextVoteButton ]
+                , div [ classes [ fl ] ]
+                    [ div [ classes [ lh_copy ] ]
+                        [ div [ classes [ fl, w_80 ] ]
+                            [ currentVoteInfo current
+                            , div [] [ previousVoteButton, nextVoteButton ]
+                            ]
                         ]
-                    , hoveredPersonInfo hoveredPersonEvent
+                    , div [ classes [ center, mw_100 ] ] [ chart ]
                     ]
-                , div [ classes [ center, mw_100 ] ] [ chart ]
+                , div [ classes [ fr ] ]
+                    [ personInfoBox selectedPersonEvent
+                    , personInfoBox hoveredPersonEvent
+                    ]
                 ]
 
         _ ->
@@ -315,8 +335,8 @@ currentVoteInfo currentVote =
         ]
 
 
-hoveredPersonInfo : Maybe VoteEvent -> Html msg
-hoveredPersonInfo event =
+personInfoBox : Maybe VoteEvent -> Html msg
+personInfoBox event =
     let
         info =
             Maybe.map personInfo event
@@ -324,8 +344,7 @@ hoveredPersonInfo event =
     in
     div
         [ classes
-            [ fr
-            , br2
+            [ br2
             , bg_white
             , Tachyons.Classes.h5
             , w5
@@ -402,7 +421,10 @@ personImage event =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    personNodeHovered PersonNodeHovered
+    Sub.batch
+        [ personNodeHovered PersonNodeHovered
+        , personNodeClicked PersonNodeClicked
+        ]
 
 
 
