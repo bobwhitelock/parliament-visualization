@@ -325,9 +325,11 @@ viewVotes hoveredPersonId selectedPersonId votes =
                     ]
                 , div [ classes [ fl, w_25 ] ]
                     [ div [ classes [ fr ] ]
-                        [ personInfoBox selectedPersonEvent
-                        , personInfoBox hoveredPersonEvent
-                        ]
+                        (Maybe.Extra.values
+                            [ personInfoBox selectedPersonEvent
+                            , personInfoBox hoveredPersonEvent
+                            ]
+                        )
                     ]
                 ]
 
@@ -349,24 +351,23 @@ currentVoteInfo currentVote =
         ]
 
 
-personInfoBox : Maybe VoteEvent -> Html msg
+personInfoBox : Maybe VoteEvent -> Maybe (Html msg)
 personInfoBox event =
-    let
-        info =
-            Maybe.map personInfo event
-                |> Maybe.withDefault (text "")
-    in
-    div
-        [ classes
-            [ br2
-            , bg_white
-            , Tachyons.Classes.h5
-            , w5
-            , f3
-            , tc
-            ]
-        ]
-        [ info ]
+    Maybe.map
+        (\event_ ->
+            div
+                [ classes
+                    [ br2
+                    , bg_white
+                    , Tachyons.Classes.h5
+                    , w5
+                    , f3
+                    , tc
+                    ]
+                ]
+                [ personInfo event_ ]
+        )
+        event
 
 
 personInfo : VoteEvent -> Html msg
