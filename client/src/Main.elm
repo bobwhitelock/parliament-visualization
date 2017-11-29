@@ -316,18 +316,18 @@ viewVotes hoveredPersonId selectedPersonId votes =
                     ]
                 ]
                 [ tachyons.css
-                , div [ classes [ fl ] ]
+                , div [ classes [ fl, w_75 ] ]
                     [ div [ classes [ lh_copy ] ]
-                        [ div [ classes [ fl, w_80 ] ]
-                            [ currentVoteInfo current
-                            , div [] [ previousVoteButton, nextVoteButton ]
-                            ]
+                        [ currentVoteInfo current
+                        , div [] [ previousVoteButton, nextVoteButton ]
                         ]
                     , div [ classes [ center, mw_100 ] ] [ chart ]
                     ]
-                , div [ classes [ fr ] ]
-                    [ personInfoBox selectedPersonEvent
-                    , personInfoBox hoveredPersonEvent
+                , div [ classes [ fl, w_25 ] ]
+                    [ div [ classes [ fr ] ]
+                        [ personInfoBox selectedPersonEvent
+                        , personInfoBox hoveredPersonEvent
+                        ]
                     ]
                 ]
 
