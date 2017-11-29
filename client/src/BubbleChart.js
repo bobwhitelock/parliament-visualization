@@ -96,6 +96,9 @@ export default class BubbleChart {
     const personNodeHovered = node =>
       this.app.ports.personNodeHovered.send(node.personId);
 
+    const personNodeUnhovered = node =>
+      this.app.ports.personNodeUnhovered.send(node.personId);
+
     const personNodeClicked = node =>
       this.app.ports.personNodeClicked.send(node.personId);
 
@@ -117,8 +120,8 @@ export default class BubbleChart {
       })
       .attr('stroke-width', 2)
       .on('mouseover', personNodeHovered)
+      .on('mouseout', personNodeUnhovered)
       .on('click', personNodeClicked);
-    // .on('mouseout', hideDetail);
 
     // Merge the original empty selection and the enter selection
     this.bubbles = this.bubbles.merge(bubblesE);

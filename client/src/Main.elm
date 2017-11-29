@@ -28,6 +28,9 @@ port chartData : E.Value -> Cmd msg
 port personNodeHovered : (Int -> msg) -> Sub msg
 
 
+port personNodeUnhovered : (Int -> msg) -> Sub msg
+
+
 port personNodeClicked : (Int -> msg) -> Sub msg
 
 
@@ -73,6 +76,7 @@ type Msg
     | VoteChanged String
     | ShowVote Vote.Id
     | PersonNodeHovered Int
+    | PersonNodeUnhovered Int
     | PersonNodeClicked Int
 
 
@@ -127,6 +131,16 @@ update msg model =
 
         PersonNodeHovered personId ->
             { model | hoveredPersonId = Just personId } ! []
+
+        PersonNodeUnhovered personId ->
+            let
+                newModel =
+                    if model.hoveredPersonId == Just personId then
+                        { model | hoveredPersonId = Nothing }
+                    else
+                        model
+            in
+            newModel ! []
 
         PersonNodeClicked personId ->
             { model | selectedPersonId = Just personId } ! []
@@ -423,6 +437,7 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
         [ personNodeHovered PersonNodeHovered
+        , personNodeUnhovered PersonNodeUnhovered
         , personNodeClicked PersonNodeClicked
         ]
 
