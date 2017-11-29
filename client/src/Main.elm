@@ -358,58 +358,64 @@ currentVoteInfo currentVote =
 
 selectedPersonInfoBox : Maybe VoteEvent -> Maybe (Html Msg)
 selectedPersonInfoBox =
-    personInfoBox True
+    maybePersonInfoBox True
 
 
 hoveredPersonInfoBox : Maybe VoteEvent -> Maybe (Html Msg)
 hoveredPersonInfoBox =
-    personInfoBox False
+    maybePersonInfoBox False
 
 
-personInfoBox : Bool -> Maybe VoteEvent -> Maybe (Html Msg)
+maybePersonInfoBox : Bool -> Maybe VoteEvent -> Maybe (Html Msg)
+maybePersonInfoBox showIcons =
+    Maybe.map (personInfoBox showIcons)
+
+
+personInfoBox : Bool -> VoteEvent -> Html Msg
 personInfoBox showIcons event =
-    Maybe.map
-        (\event_ ->
+    let
+        colour =
+            if VoteEvent.isSpeaker event then
+                -- Showing speaker's party colour as black, so show text as
+                -- white so can see it.
+                white
+            else
+                black
+
+        lockIcon =
             div
                 [ classes
-                    [ br2
-                    , bg_white
-                    , Tachyons.Classes.h5
-                    , w5
-                    , f3
-                    , tc
-                    , relative
-                    , if VoteEvent.isSpeaker event_ then
-                        -- Showing speaker's party colour as black, so show
-                        -- text as white so can see it.
-                        white
-                      else
-                        black
+                    [ absolute
+                    , left_0
+                    , bottom_0
+                    , pa2
+                    , dim
                     ]
+                , title "Click to stop tracking"
+                , onClick ClearSelectedPerson
                 ]
-                (Maybe.Extra.values
-                    [ Just (personInfo event_)
-                    , if showIcons then
-                        Just
-                            (div
-                                [ classes
-                                    [ absolute
-                                    , left_0
-                                    , bottom_0
-                                    , pa2
-                                    , dim
-                                    ]
-                                , title "Click to stop tracking"
-                                , onClick ClearSelectedPerson
-                                ]
-                                [ FeatherIcons.lock ]
-                            )
-                      else
-                        Nothing
-                    ]
-                )
+                [ FeatherIcons.lock ]
+    in
+    div
+        [ classes
+            [ br2
+            , bg_white
+            , Tachyons.Classes.h5
+            , w5
+            , f3
+            , tc
+            , relative
+            , colour
+            ]
+        ]
+        (Maybe.Extra.values
+            [ Just (personInfo event)
+            , if showIcons then
+                Just lockIcon
+              else
+                Nothing
+            ]
         )
-        event
 
 
 personInfo : VoteEvent -> Html msg
