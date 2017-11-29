@@ -2,6 +2,7 @@ port module Main exposing (..)
 
 import Date.Extra
 import EveryDict as Dict
+import FeatherIcons
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
@@ -78,6 +79,7 @@ type Msg
     | PersonNodeHovered Int
     | PersonNodeUnhovered Int
     | PersonNodeClicked Int
+    | ClearSelectedPerson
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -144,6 +146,9 @@ update msg model =
 
         PersonNodeClicked personId ->
             { model | selectedPersonId = Just personId } ! []
+
+        ClearSelectedPerson ->
+            { model | selectedPersonId = Nothing } ! []
 
 
 {-|
@@ -326,8 +331,8 @@ viewVotes hoveredPersonId selectedPersonId votes =
                 , div [ classes [ fl, w_25 ] ]
                     [ div [ classes [ fr ] ]
                         (Maybe.Extra.values
-                            [ personInfoBox selectedPersonEvent
-                            , personInfoBox hoveredPersonEvent
+                            [ selectedPersonInfoBox selectedPersonEvent
+                            , hoveredPersonInfoBox hoveredPersonEvent
                             ]
                         )
                     ]
@@ -351,8 +356,18 @@ currentVoteInfo currentVote =
         ]
 
 
-personInfoBox : Maybe VoteEvent -> Maybe (Html msg)
-personInfoBox event =
+selectedPersonInfoBox : Maybe VoteEvent -> Maybe (Html Msg)
+selectedPersonInfoBox =
+    personInfoBox True
+
+
+hoveredPersonInfoBox : Maybe VoteEvent -> Maybe (Html Msg)
+hoveredPersonInfoBox =
+    personInfoBox False
+
+
+personInfoBox : Bool -> Maybe VoteEvent -> Maybe (Html Msg)
+personInfoBox showIcons event =
     Maybe.map
         (\event_ ->
             div
@@ -363,29 +378,44 @@ personInfoBox event =
                     , w5
                     , f3
                     , tc
+                    , relative
+                    , if VoteEvent.isSpeaker event_ then
+                        -- Showing speaker's party colour as black, so show
+                        -- text as white so can see it.
+                        white
+                      else
+                        black
                     ]
                 ]
-                [ personInfo event_ ]
+                (Maybe.Extra.values
+                    [ Just (personInfo event_)
+                    , if showIcons then
+                        Just
+                            (div
+                                [ classes
+                                    [ absolute
+                                    , left_0
+                                    , bottom_0
+                                    , pa2
+                                    , dim
+                                    ]
+                                , title "Click to stop tracking"
+                                , onClick ClearSelectedPerson
+                                ]
+                                [ FeatherIcons.lock ]
+                            )
+                      else
+                        Nothing
+                    ]
+                )
         )
         event
 
 
 personInfo : VoteEvent -> Html msg
 personInfo event =
-    let
-        classList =
-            Maybe.Extra.values
-                [ Just h_100
-                , if VoteEvent.isSpeaker event then
-                    -- Showing speaker's party colour as black, so show text as
-                    -- white so can see it.
-                    Just white
-                  else
-                    Nothing
-                ]
-    in
     div
-        [ classes classList
+        [ classes [ h_100 ]
         , style [ ( "background-color", VoteEvent.partyColour event ) ]
         ]
         [ div [] [ text event.name ]
