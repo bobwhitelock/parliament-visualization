@@ -13,8 +13,8 @@ type alias Vote =
     { id : Id
     , policyTitle : String
     , text : String
-    , actionsYes : Maybe String
-    , actionsNo : Maybe String
+    , actionsYes : String
+    , actionsNo : String
     , date : Date
     , voteEvents : WebData (List VoteEvent)
     }
@@ -76,8 +76,8 @@ withoutEventsDecoder =
         (D.field "id" D.int |> D.map Id)
         (D.field "policy_title" D.string)
         (D.field "text" D.string)
-        (D.field "actions_yes" (D.nullable D.string))
-        (D.field "actions_no" (D.nullable D.string))
+        (D.field "actions_yes" D.string)
+        (D.field "actions_no" D.string)
         (D.field "date" D.string)
 
 
@@ -112,7 +112,7 @@ withEventsDecoder =
         (D.field "id" D.int |> D.map Id)
         (D.field "policy_title" D.string)
         (D.field "text" D.string)
-        (D.field "actions_yes" (D.nullable D.string))
-        (D.field "actions_no" (D.nullable D.string))
+        (D.field "actions_yes" D.string)
+        (D.field "actions_no" D.string)
         (D.field "date" D.string)
         (D.field "voteEvents" (D.list VoteEvent.decoder |> D.map Success))
