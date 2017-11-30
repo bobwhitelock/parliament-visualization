@@ -390,8 +390,9 @@ personInfoBox showIcons event =
                     , bottom_0
                     , pa2
                     , dim
+                    , pointer
                     ]
-                , title "Click to stop tracking"
+                , title "Stop tracking"
                 , onClick ClearSelectedPerson
                 ]
                 [ FeatherIcons.lock ]
