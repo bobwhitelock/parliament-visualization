@@ -383,38 +383,46 @@ personInfoBox showIcons event =
                 black
 
         lockIcon =
-            div
-                [ classes
-                    [ absolute
-                    , left_0
-                    , bottom_0
-                    , pa2
-                    , dim
-                    , pointer
-                    ]
-                , title "Stop tracking"
+            iconButton left_0
+                FeatherIcons.lock
+                [ title "Stop tracking"
                 , onClick ClearSelectedPerson
                 ]
-                [ FeatherIcons.lock ]
+
+        infoLinkIcon =
+            iconButton right_0
+                FeatherIcons.externalLink
+                [ title "View on TheyWorkForYou"
+                , href infoLink
+                ]
 
         infoLink =
             "https://www.theyworkforyou.com/mp/" ++ toString event.personId
 
-        infoLinkIcon =
-            a
-                [ classes
-                    [ absolute
-                    , right_0
-                    , bottom_0
-                    , pa2
-                    , dim
-                    , colour
-                    ]
-                , title "View on TheyWorkForYou"
-                , href infoLink
-                , target "_blank"
-                ]
-                [ FeatherIcons.externalLink ]
+        iconButton =
+            \position ->
+                \icon ->
+                    \attributes ->
+                        if showIcons then
+                            Just
+                                (a
+                                    ([ classes
+                                        [ absolute
+                                        , position
+                                        , bottom_0
+                                        , pa2
+                                        , dim
+                                        , colour
+                                        , pointer
+                                        ]
+                                     , target "_blank"
+                                     ]
+                                        ++ attributes
+                                    )
+                                    [ icon ]
+                                )
+                        else
+                            Nothing
     in
     div
         [ classes
@@ -430,14 +438,8 @@ personInfoBox showIcons event =
         ]
         (Maybe.Extra.values
             [ Just (personInfo event)
-            , if showIcons then
-                Just lockIcon
-              else
-                Nothing
-            , if showIcons then
-                Just infoLinkIcon
-              else
-                Nothing
+            , lockIcon
+            , infoLinkIcon
             ]
         )
 
