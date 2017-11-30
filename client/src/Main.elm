@@ -395,6 +395,25 @@ personInfoBox showIcons event =
                 , onClick ClearSelectedPerson
                 ]
                 [ FeatherIcons.lock ]
+
+        infoLink =
+            "https://www.theyworkforyou.com/mp/" ++ toString event.personId
+
+        infoLinkIcon =
+            a
+                [ classes
+                    [ absolute
+                    , right_0
+                    , bottom_0
+                    , pa2
+                    , dim
+                    , colour
+                    ]
+                , title "View on TheyWorkForYou"
+                , href infoLink
+                , target "_blank"
+                ]
+                [ FeatherIcons.externalLink ]
     in
     div
         [ classes
@@ -412,6 +431,10 @@ personInfoBox showIcons event =
             [ Just (personInfo event)
             , if showIcons then
                 Just lockIcon
+              else
+                Nothing
+            , if showIcons then
+                Just infoLinkIcon
               else
                 Nothing
             ]
