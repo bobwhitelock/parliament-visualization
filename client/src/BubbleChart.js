@@ -1,23 +1,24 @@
 import * as d3 from 'd3';
 
-const width = 1000;
-const height = 800;
-
-const center = {x: width / 2, y: height / 2};
-
-const positions = {
-  yes: {x: width / 3, y: height / 2},
-  absent: center,
-  both: center,
-  no: {x: 2 * width / 3, y: height / 2},
-};
-
 const forceStrength = 0.03;
 
 export default class BubbleChart {
   constructor(app, selector) {
     this.app = app;
     this.svg = d3.select(selector);
+
+    this.width = this.svg.attr('width');
+    this.height = this.svg.attr('height');
+
+    const left = {x: this.width / 3, y: this.height / 2};
+    const center = {x: this.width / 2, y: this.height / 2};
+    const right = {x: 2 * this.width / 3, y: this.height / 2};
+    this.positions = {
+      yes: left,
+      absent: center,
+      both: center,
+      no: right,
+    };
 
     this.bubbles = null;
     this.nodes = null;
@@ -38,7 +39,7 @@ export default class BubbleChart {
         d3
           .forceX()
           .strength(forceStrength)
-          .x(this.optionPosition),
+          .x(d => this.positions[d.option].x),
       )
       .force(
         'y',
@@ -80,8 +81,8 @@ export default class BubbleChart {
         radius: 10,
         colour: d.partyColour,
         option: d.option,
-        x: currentNode ? currentNode.x : Math.random() * 900,
-        y: currentNode ? currentNode.y : Math.random() * 800,
+        x: currentNode ? currentNode.x : Math.random() * this.width,
+        y: currentNode ? currentNode.y : Math.random() * this.height,
       };
     });
 
@@ -139,9 +140,5 @@ export default class BubbleChart {
 
     // Reset the alpha value and restart the simulation
     this.simulation.alpha(1).restart();
-  }
-
-  optionPosition(d) {
-    return positions[d.option].x;
   }
 }
