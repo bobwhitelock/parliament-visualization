@@ -268,19 +268,24 @@ viewVotes hoveredPersonId selectedPersonId votes =
         ( Just current, Just { previous, next } ) ->
             let
                 previousVoteButton =
-                    voteNavigationButton previous "<"
+                    voteNavigationButton previous FeatherIcons.chevronLeft
 
                 nextVoteButton =
-                    voteNavigationButton next ">"
+                    voteNavigationButton next FeatherIcons.chevronRight
 
                 voteNavigationButton =
                     \maybeVote ->
                         \icon ->
                             case maybeVote of
                                 Just { id } ->
-                                    button [ onClick (ShowVote id) ] [ text icon ]
+                                    button
+                                        [ onClick (ShowVote id)
+                                        , classes [ w_50, bg_white ]
+                                        ]
+                                        [ icon ]
 
                                 Nothing ->
+                                    -- XXX Just disable button in this case instead?
                                     span [] []
 
                 currentEventForPersonId =
@@ -334,10 +339,7 @@ viewVotes hoveredPersonId selectedPersonId votes =
                 ]
                 [ tachyons.css
                 , div [ classes [ fl, w_75 ] ]
-                    [ div []
-                        [ currentVoteInfo current
-                        , div [] [ previousVoteButton, nextVoteButton ]
-                        ]
+                    [ currentVoteInfo current
                     , div
                         [ classes [ center, mw_100, pt5 ] ]
                         [ chart
@@ -349,9 +351,14 @@ viewVotes hoveredPersonId selectedPersonId votes =
                         ]
                     ]
                 , div [ classes [ fl, w_25 ] ]
-                    [ div [ classes [ fr ] ]
+                    [ div [ classes [ fr, w5 ] ]
                         (Maybe.Extra.values
-                            [ selectedPersonInfoBox selectedPersonEvent
+                            [ div [ classes [ mb3 ] ]
+                                [ previousVoteButton
+                                , nextVoteButton
+                                ]
+                                |> Just
+                            , selectedPersonInfoBox selectedPersonEvent
                             , hoveredPersonInfoBox hoveredPersonEvent
                             ]
                         )
@@ -464,11 +471,11 @@ personInfoBox showIcons event =
             [ br2
             , bg_white
             , Tachyons.Classes.h5
-            , w5
             , f3
             , tc
             , relative
             , colour
+            , mb1
             ]
         ]
         (Maybe.Extra.values
