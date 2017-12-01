@@ -302,12 +302,21 @@ viewVotes hoveredPersonId selectedPersonId votes =
                     div [ classes chartClasses ]
                         [ Svg.svg
                             [ width 1000
-                            , height 800
+                            , height 550
                             , id "d3-simulation"
                             , Svg.Attributes.class "db center"
                             ]
                             []
                         ]
+
+                ayeText =
+                    voteDescription "Aye" current.actionsYes
+
+                noText =
+                    voteDescription "No" current.actionsNo
+
+                absentOrBothText =
+                    strong [] [ text "Absent or Both" ]
             in
             section
                 [ classes
@@ -318,15 +327,25 @@ viewVotes hoveredPersonId selectedPersonId votes =
                     , pa3
                     , ph5_ns
                     , helvetica
+                    , lh_copy
+                    , f4
                     ]
                 ]
                 [ tachyons.css
                 , div [ classes [ fl, w_75 ] ]
-                    [ div [ classes [ lh_copy ] ]
+                    [ div []
                         [ currentVoteInfo current
                         , div [] [ previousVoteButton, nextVoteButton ]
                         ]
-                    , div [ classes [ center, mw_100 ] ] [ chart ]
+                    , div
+                        [ classes [ center, mw_100, pt5 ] ]
+                        [ chart
+                        , div [ classes [ tc ] ]
+                            [ span [ classes [ fl, w_40, border_box, pr4 ] ] [ ayeText ]
+                            , span [ classes [ fl, w_20 ] ] [ absentOrBothText ]
+                            , span [ classes [ fl, w_40, border_box, pl4 ] ] [ noText ]
+                            ]
+                        ]
                     ]
                 , div [ classes [ fl, w_25 ] ]
                     [ div [ classes [ fr ] ]
@@ -340,6 +359,21 @@ viewVotes hoveredPersonId selectedPersonId votes =
 
         _ ->
             div [] [ text "No votes available." ]
+
+
+voteDescription : String -> String -> Html msg
+voteDescription vote details =
+    let
+        details_ =
+            String.trim details
+
+        voteHtml =
+            strong [] [ text vote ]
+    in
+    if String.isEmpty details_ then
+        voteHtml
+    else
+        span [] [ voteHtml, " " ++ details_ |> text ]
 
 
 currentVoteInfo : Vote -> Html msg
