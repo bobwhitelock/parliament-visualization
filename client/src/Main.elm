@@ -379,7 +379,7 @@ voteDescription vote details =
 currentVoteInfo : Vote -> Html msg
 currentVoteInfo currentVote =
     div
-        []
+        [ classes [ Tachyons.Classes.h3 ] ]
         [ "Current vote: "
             ++ currentVote.policyTitle
             ++ " | "
