@@ -17,7 +17,7 @@ import Tachyons exposing (classes, tachyons)
 import Tachyons.Classes exposing (..)
 import Vote exposing (Vote)
 import VoteEvent exposing (VoteEvent)
-import Votes exposing (Votes)
+import Votes exposing (NeighbouringVotes, Votes)
 
 
 -- PORTS --
@@ -265,29 +265,8 @@ view model =
 viewVotes : Maybe Int -> Maybe Int -> Votes -> Html Msg
 viewVotes hoveredPersonId selectedPersonId votes =
     case ( Votes.selected votes, Votes.neighbouringVotes votes ) of
-        ( Just current, Just { previous, next } ) ->
+        ( Just current, Just neighbouringVotes ) ->
             let
-                previousVoteButton =
-                    voteNavigationButton previous FeatherIcons.chevronLeft
-
-                nextVoteButton =
-                    voteNavigationButton next FeatherIcons.chevronRight
-
-                voteNavigationButton =
-                    \maybeVote ->
-                        \icon ->
-                            case maybeVote of
-                                Just { id } ->
-                                    button
-                                        [ onClick (ShowVote id)
-                                        , classes [ w_50, bg_white ]
-                                        ]
-                                        [ icon ]
-
-                                Nothing ->
-                                    -- XXX Just disable button in this case instead?
-                                    span [] []
-
                 currentEventForPersonId =
                     Vote.eventForPersonId current
 
@@ -296,32 +275,6 @@ viewVotes hoveredPersonId selectedPersonId votes =
 
                 selectedPersonEvent =
                     currentEventForPersonId selectedPersonId
-
-                chartClasses =
-                    if RemoteData.isLoading current.voteEvents then
-                        [ o_70 ]
-                    else
-                        []
-
-                chart =
-                    div [ classes chartClasses ]
-                        [ Svg.svg
-                            [ width 1000
-                            , height 550
-                            , id "d3-simulation"
-                            , Svg.Attributes.class "db center"
-                            ]
-                            []
-                        ]
-
-                ayeText =
-                    voteDescription "Aye" current.actionsYes
-
-                noText =
-                    voteDescription "No" current.actionsNo
-
-                absentOrBothText =
-                    strong [] [ text "Absent or Both" ]
             in
             section
                 [ classes
@@ -340,24 +293,12 @@ viewVotes hoveredPersonId selectedPersonId votes =
                 [ tachyons.css
                 , div [ classes [ fl, w_75 ] ]
                     [ currentVoteInfo current
-                    , div
-                        [ classes [ center, mw_100, pt5 ] ]
-                        [ chart
-                        , div [ classes [ tc ] ]
-                            [ span [ classes [ fl, w_40, border_box, pr4 ] ] [ ayeText ]
-                            , span [ classes [ fl, w_20 ] ] [ absentOrBothText ]
-                            , span [ classes [ fl, w_40, border_box, pl4 ] ] [ noText ]
-                            ]
-                        ]
+                    , voteChart current
                     ]
                 , div [ classes [ fl, w_25 ] ]
                     [ div [ classes [ fr, w5 ] ]
                         (Maybe.Extra.values
-                            [ div [ classes [ mb3 ] ]
-                                [ previousVoteButton
-                                , nextVoteButton
-                                ]
-                                |> Just
+                            [ navigationButtons neighbouringVotes |> Just
                             , selectedPersonInfoBox selectedPersonEvent
                             , hoveredPersonInfoBox hoveredPersonEvent
                             ]
@@ -367,6 +308,46 @@ viewVotes hoveredPersonId selectedPersonId votes =
 
         _ ->
             div [] [ text "No votes available." ]
+
+
+voteChart : Vote -> Html msg
+voteChart vote =
+    let
+        chartClasses =
+            if RemoteData.isLoading vote.voteEvents then
+                [ o_70 ]
+            else
+                []
+
+        chart =
+            div [ classes chartClasses ]
+                [ Svg.svg
+                    [ width 1000
+                    , height 550
+                    , id "d3-simulation"
+                    , Svg.Attributes.class "db center"
+                    ]
+                    []
+                ]
+
+        ayeText =
+            voteDescription "Aye" vote.actionsYes
+
+        noText =
+            voteDescription "No" vote.actionsNo
+
+        absentOrBothText =
+            strong [] [ text "Absent or Both" ]
+    in
+    div
+        [ classes [ center, mw_100, pt5 ] ]
+        [ chart
+        , div [ classes [ tc ] ]
+            [ span [ classes [ fl, w_40, border_box, pr4 ] ] [ ayeText ]
+            , span [ classes [ fl, w_20 ] ] [ absentOrBothText ]
+            , span [ classes [ fl, w_40, border_box, pl4 ] ] [ noText ]
+            ]
+        ]
 
 
 voteDescription : String -> String -> Html msg
@@ -396,6 +377,41 @@ currentVoteInfo currentVote =
             ++ Date.Extra.toFormattedString "ddd MMMM, y" currentVote.date
             |> text
         ]
+
+
+navigationButtons : NeighbouringVotes -> Html Msg
+navigationButtons { previous, next } =
+    let
+        previousVoteButton =
+            voteNavigationButton previous FeatherIcons.chevronLeft
+
+        nextVoteButton =
+            voteNavigationButton next FeatherIcons.chevronRight
+
+        voteNavigationButton =
+            \maybeVote ->
+                \icon ->
+                    case maybeVote of
+                        Just { id } ->
+                            button
+                                [ onClick (ShowVote id)
+                                , classes [ w_50, bg_white ]
+                                ]
+                                [ icon ]
+
+                        Nothing ->
+                            -- XXX Just disable button in this case instead?
+                            span [] []
+    in
+    div [ classes [ mb3 ] ]
+        [ previousVoteButton
+        , nextVoteButton
+        ]
+
+
+
+-- controls : Maybe Int -> Maybe Int -> Vote -> Html Msg
+-- controls hoveredPersonId selectedPersonId currentVote =
 
 
 selectedPersonInfoBox : Maybe VoteEvent -> Maybe (Html Msg)
