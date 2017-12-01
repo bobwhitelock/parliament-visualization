@@ -320,7 +320,7 @@ viewVotes hoveredPersonId selectedPersonId votes =
             in
             section
                 [ classes
-                    [ vh_100
+                    [ min_vh_100
                     , mw9
                     , center
                     , bg_near_white
@@ -329,6 +329,7 @@ viewVotes hoveredPersonId selectedPersonId votes =
                     , helvetica
                     , lh_copy
                     , f4
+                    , overflow_hidden
                     ]
                 ]
                 [ tachyons.css
