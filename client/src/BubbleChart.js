@@ -2,6 +2,11 @@ import * as d3 from 'd3';
 
 const forceStrength = 0.03;
 
+// Threshold where, when the simulation alpha goes below this, we will send a
+// message to the Elm app to inform it that the current chart simulation is
+// almost complete.
+const chartSettledThreshold = 0.2;
+
 export default class BubbleChart {
   constructor(app, selector) {
     this.app = app;
@@ -29,6 +34,7 @@ export default class BubbleChart {
     // simulation.
     this.ticked = () => {
       this.bubbles.attr('cx', d => d.x).attr('cy', d => d.y);
+      this.handleChartSettled();
     };
 
     this.simulation = d3
@@ -54,6 +60,16 @@ export default class BubbleChart {
     // Force simulation starts automatically, which we don't want as there aren't
     // any nodes yet.
     this.simulation.stop();
+  }
+
+  handleChartSettled() {
+    const alphaBelowThreshold = this.simulation.alpha() < chartSettledThreshold;
+    const chartJustSettled = !this.chartSettled && alphaBelowThreshold;
+
+    if (chartJustSettled) {
+      this.chartSettled = true;
+      this.app.ports.chartSettled.send(null);
+    }
   }
 
   // Charge function that is called for each node.  As part of the ManyBody
@@ -137,6 +153,9 @@ export default class BubbleChart {
 
     // Set the simulation's nodes to our newly created nodes array.
     this.simulation.nodes(this.nodes);
+
+    // Reset this so we re-inform the Elm app when the chart settles again.
+    this.chartSettled = false;
 
     // Reset the alpha value and restart the simulation
     this.simulation.alpha(1).restart();

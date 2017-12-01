@@ -26,6 +26,9 @@ import Votes exposing (NeighbouringVotes, Votes)
 port chartData : E.Value -> Cmd msg
 
 
+port chartSettled : (() -> msg) -> Sub msg
+
+
 port personNodeHovered : (Int -> msg) -> Sub msg
 
 
@@ -80,6 +83,7 @@ type Msg
     | PersonNodeUnhovered Int
     | PersonNodeClicked Int
     | ClearSelectedPerson
+    | ChartSettled ()
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -150,6 +154,15 @@ update msg model =
         ClearSelectedPerson ->
             { model | selectedPersonId = Nothing } ! []
 
+        ChartSettled _ ->
+            -- Only request neighbouring vote events, if needed, once we are
+            -- informed that the current chart simulation has mostly complete.
+            -- If this is done sooner it appears to noticeably interrupt and
+            -- slow down the simulation, while waiting for the simulation to
+            -- fully complete can take quite a long time; this seems a
+            -- reasonable compromise.
+            model ! [ getNeighbouringVoteEvents model ]
+
 
 {-|
 
@@ -159,6 +172,49 @@ update msg model =
 -}
 handleVoteStateChange : Model -> ( Model, Cmd Msg )
 handleVoteStateChange model =
+    case model.votes of
+        Success votes ->
+            case Votes.selected votes of
+                Just vote ->
+                    case vote.voteEvents of
+                        Success voteEvents ->
+                            { model | chartVoteId = Just vote.id }
+                                ! [ sendChartData vote ]
+
+                        NotAsked ->
+                            let
+                                newVotesData =
+                                    Dict.update
+                                        vote.id
+                                        (Maybe.map
+                                            (\vote -> { vote | voteEvents = Loading })
+                                        )
+                                        votes.data
+
+                                newVotes =
+                                    Votes votes.selected newVotesData |> Success
+
+                                newModel =
+                                    { model | votes = newVotes }
+                            in
+                            newModel ! [ getEventsForVote vote.id ]
+
+                        Failure _ ->
+                            -- XXX Handle this somewhere?
+                            model ! []
+
+                        Loading ->
+                            model ! []
+
+                Nothing ->
+                    model ! []
+
+        _ ->
+            model ! []
+
+
+getNeighbouringVoteEvents : Model -> Cmd Msg
+getNeighbouringVoteEvents model =
     case model.votes of
         Success votes ->
             case Votes.selected votes of
@@ -178,41 +234,13 @@ handleVoteStateChange model =
                             Maybe.Extra.values
                                 [ maybeCmdToGet previous, maybeCmdToGet next ]
                     in
-                    case vote.voteEvents of
-                        Success voteEvents ->
-                            { model | chartVoteId = Just vote.id }
-                                ! (sendChartData vote :: neighbouringVotesToGet)
-
-                        NotAsked ->
-                            let
-                                newVotesData =
-                                    Dict.update
-                                        vote.id
-                                        (Maybe.map
-                                            (\vote -> { vote | voteEvents = Loading })
-                                        )
-                                        votes.data
-
-                                newVotes =
-                                    Votes votes.selected newVotesData |> Success
-
-                                newModel =
-                                    { model | votes = newVotes }
-                            in
-                            newModel ! (getEventsForVote vote.id :: neighbouringVotesToGet)
-
-                        Failure _ ->
-                            -- XXX Handle this somewhere?
-                            model ! neighbouringVotesToGet
-
-                        Loading ->
-                            model ! neighbouringVotesToGet
+                    Cmd.batch neighbouringVotesToGet
 
                 Nothing ->
-                    model ! []
+                    Cmd.none
 
         _ ->
-            model ! []
+            Cmd.none
 
 
 cmdToGetEvents : Vote -> Maybe (Cmd Msg)
@@ -560,6 +588,7 @@ subscriptions model =
         [ personNodeHovered PersonNodeHovered
         , personNodeUnhovered PersonNodeUnhovered
         , personNodeClicked PersonNodeClicked
+        , chartSettled ChartSettled
         ]
 
 
