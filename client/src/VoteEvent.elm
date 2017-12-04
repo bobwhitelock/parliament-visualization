@@ -1,5 +1,7 @@
 module VoteEvent exposing (VoteEvent, decoder, encode, isSpeaker, partyColour)
 
+import Color exposing (Color)
+import Color.Convert
 import Json.Decode as D
 import Json.Encode as E
 import VoteOption exposing (VoteOption)
@@ -50,19 +52,24 @@ isSpeaker event =
 
 
 partyColour : VoteEvent -> String
-partyColour event =
+partyColour =
+    rawPartyColour >> Color.Convert.colorToHex
+
+
+rawPartyColour : VoteEvent -> Color
+rawPartyColour event =
     let
         party =
             String.toLower event.party
 
         labour =
-            "#DC241f"
+            Color.rgb 220 36 31
 
         speaker =
-            "black"
+            Color.rgb 0 0 0
 
         independent =
-            "grey"
+            Color.rgb 128 128 128
     in
     -- All colours obtained from Wikipedia.
     case party of
@@ -73,43 +80,43 @@ partyColour event =
             labour
 
         "conservative" ->
-            "#0087DC"
+            Color.rgb 0 135 220
 
         "liberal democrat" ->
-            "#FAA61A"
+            Color.rgb 250 166 26
 
         "scottish national party" ->
-            "#FEF987"
+            Color.rgb 254 249 135
 
         "dup" ->
-            "#D46A4C"
+            Color.rgb 212 106 76
 
         "sinn féin" ->
-            "#008800"
+            Color.rgb 0 136 0
 
         "plaid cymru" ->
-            "#008142"
+            Color.rgb 0 129 66
 
         "green" ->
-            "#6AB023"
+            Color.rgb 106 176 35
 
         "social democratic and labour party" ->
-            "#99FF66"
+            Color.rgb 153 255 102
 
         "alliance" ->
-            "#F6CB2F"
+            Color.rgb 246 203 47
 
         "respect" ->
-            "red"
+            Color.rgb 255 0 0
 
         "uup" ->
-            "#9999FF"
+            Color.rgb 153 153 255
 
         "ukip" ->
-            "#70147A"
+            Color.rgb 112 20 122
 
         "ukup" ->
-            "#90C"
+            Color.rgb 153 0 204
 
         "speaker" ->
             speaker
@@ -131,4 +138,4 @@ partyColour event =
 
         unknown ->
             -- Should never occur since handling all parties in current data.
-            "rebeccapurple"
+            Color.rgb 102 51 153
