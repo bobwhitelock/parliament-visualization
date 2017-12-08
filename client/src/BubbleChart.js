@@ -95,7 +95,7 @@ export default class BubbleChart {
       return {
         personId: d.personId,
         radius: 10,
-        colour: d.partyColour,
+        colour: d.colour,
         option: d.option,
         x: currentNode ? currentNode.x : Math.random() * this.width,
         y: currentNode ? currentNode.y : Math.random() * this.height,
@@ -129,12 +129,6 @@ export default class BubbleChart {
       .classed('bubble', true)
       .classed('dim', true)
       .attr('r', 0)
-      .attr('fill', function(d) {
-        return d.colour;
-      })
-      .attr('stroke', function(d) {
-        return d3.rgb(d.colour).darker();
-      })
       .attr('stroke-width', 2)
       .on('mouseover', personNodeHovered)
       .on('mouseout', personNodeUnhovered)
@@ -142,6 +136,15 @@ export default class BubbleChart {
 
     // Merge the original empty selection and the enter selection
     this.bubbles = this.bubbles.merge(bubblesE);
+
+    // Set/update all bubble colours.
+    this.bubbles
+      .attr('fill', function(d) {
+        return d.colour;
+      })
+      .attr('stroke', function(d) {
+        return d3.rgb(d.colour).darker();
+      });
 
     // Fancy transition to make bubbles appear, ending with the correct radius
     this.bubbles

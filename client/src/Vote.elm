@@ -24,11 +24,11 @@ type Id
     = Id Int
 
 
-chartDataValue : Vote -> E.Value
-chartDataValue vote =
+chartDataValue : Maybe Int -> Vote -> E.Value
+chartDataValue selectedPersonId vote =
     case vote.voteEvents of
         Success events ->
-            E.list (List.map VoteEvent.encode events)
+            E.list (List.map (VoteEvent.encode selectedPersonId) events)
 
         _ ->
             -- XXX Handle this better.

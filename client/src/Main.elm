@@ -149,7 +149,7 @@ update msg model =
             newModel ! []
 
         PersonNodeClicked personId ->
-            { model | selectedPersonId = Just personId } ! []
+            { model | selectedPersonId = Just personId } |> handleVoteStateChange
 
         ClearSelectedPerson ->
             { model | selectedPersonId = Nothing } ! []
@@ -179,7 +179,7 @@ handleVoteStateChange model =
                     case vote.voteEvents of
                         Success voteEvents ->
                             { model | chartVoteId = Just vote.id }
-                                ! [ sendChartData vote ]
+                                ! [ sendChartData model.selectedPersonId vote ]
 
                         NotAsked ->
                             let
@@ -265,9 +265,9 @@ getEventsForVote voteId =
         |> Cmd.map (VoteEventsResponse voteId)
 
 
-sendChartData : Vote -> Cmd msg
-sendChartData vote =
-    Vote.chartDataValue vote |> chartData
+sendChartData : Maybe Int -> Vote -> Cmd msg
+sendChartData selectedPersonId vote =
+    Vote.chartDataValue selectedPersonId vote |> chartData
 
 
 

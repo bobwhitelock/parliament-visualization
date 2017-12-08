@@ -2,6 +2,7 @@ module VoteEvent exposing (VoteEvent, decoder, encode, isSpeaker, partyColour)
 
 import Color exposing (Color)
 import Color.Convert
+import Color.Manipulate
 import Json.Decode as D
 import Json.Encode as E
 import VoteOption exposing (VoteOption)
@@ -24,12 +25,12 @@ decoder =
         (D.field "option" VoteOption.decoder)
 
 
-encode : VoteEvent -> E.Value
-encode event =
+encode : Maybe Int -> VoteEvent -> E.Value
+encode selectedPersonId event =
     E.object
         [ ( "personId", E.int event.personId )
         , ( "name", E.string event.name )
-        , ( "partyColour", partyColour event |> E.string )
+        , ( "colour", personColour selectedPersonId event |> E.string )
         , ( "option", toString event.option |> String.toLower |> E.string )
         ]
 
@@ -49,6 +50,28 @@ isSpeaker event =
 
         _ ->
             False
+
+
+personColour : Maybe Int -> VoteEvent -> String
+personColour selectedPersonId =
+    rawPersonColour selectedPersonId >> Color.Convert.colorToHex
+
+
+rawPersonColour : Maybe Int -> VoteEvent -> Color
+rawPersonColour maybeSelectedPersonId event =
+    let
+        partyColour =
+            rawPartyColour event
+
+        alterColourIfSelected =
+            \selectedPersonId ->
+                if event.personId == selectedPersonId then
+                    Color.Manipulate.lighten 0.1 partyColour
+                else
+                    partyColour
+    in
+    Maybe.map alterColourIfSelected maybeSelectedPersonId
+        |> Maybe.withDefault partyColour
 
 
 partyColour : VoteEvent -> String
