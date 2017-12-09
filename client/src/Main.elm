@@ -88,6 +88,7 @@ type Msg
     | ClearSelectedPerson
     | ChartSettled ()
     | FilterByPolicy Policy.Id
+    | ClearPolicyFilter
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -170,6 +171,9 @@ update msg model =
 
         FilterByPolicy policyId ->
             { model | filteredPolicyId = Just policyId } ! []
+
+        ClearPolicyFilter ->
+            { model | filteredPolicyId = Nothing } ! []
 
 
 handleVoteStateChangeWithRestart : Model -> ( Model, Cmd Msg )
@@ -360,7 +364,7 @@ viewVotes votes model =
                 [ tachyons.css
                 , div
                     [ classes [ fl, w_75 ] ]
-                    [ currentVoteInfo votes current
+                    [ currentVoteInfo filteredPolicyId votes current
                     , nodeHoveredText hoveredPersonId selectedPersonId
                     , voteChart current
                     ]
@@ -434,8 +438,8 @@ voteDescription vote details =
         span [] [ voteHtml, " " ++ details_ |> text ]
 
 
-currentVoteInfo : Votes -> Vote -> Html Msg
-currentVoteInfo votes currentVote =
+currentVoteInfo : Maybe Policy.Id -> Votes -> Vote -> Html Msg
+currentVoteInfo filteredPolicyId votes currentVote =
     let
         currentVotePolicies =
             List.map
@@ -446,9 +450,23 @@ currentVoteInfo votes currentVote =
         policyButtons =
             List.map
                 (\policy ->
+                    let
+                        ( colour, msg, titleText ) =
+                            if Just policy.id == filteredPolicyId then
+                                ( bg_silver
+                                , ClearPolicyFilter
+                                , "Currently only showing votes related to this policy; click to show all votes"
+                                )
+                            else
+                                ( buttonColour
+                                , FilterByPolicy policy.id
+                                , "Only show votes related to this policy"
+                                )
+                    in
                     button
-                        [ classes [ buttonColour ]
-                        , onClick (FilterByPolicy policy.id)
+                        [ classes [ colour ]
+                        , onClick msg
+                        , title titleText
                         ]
                         [ text policy.title ]
                 )
