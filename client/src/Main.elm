@@ -94,7 +94,7 @@ update msg model =
                 newModel =
                     { model | votes = votes }
             in
-            handleVoteStateChange newModel
+            handleVoteStateChangeWithRestart newModel
 
         VoteEventsResponse voteId response ->
             case model.votes of
@@ -112,7 +112,7 @@ update msg model =
                         newModel =
                             { model | votes = newVotes }
                     in
-                    handleVoteStateChange newModel
+                    handleVoteStateChangeWithRestart newModel
 
                 _ ->
                     model ! []
@@ -130,7 +130,7 @@ update msg model =
                         newModel =
                             { model | votes = newVotes }
                     in
-                    handleVoteStateChange newModel
+                    handleVoteStateChangeWithRestart newModel
 
                 _ ->
                     model ! []
@@ -149,7 +149,7 @@ update msg model =
             newModel ! []
 
         PersonNodeClicked personId ->
-            { model | selectedPersonId = Just personId } |> handleVoteStateChange
+            { model | selectedPersonId = Just personId } |> handleVoteStateChangeWithoutRestart
 
         ClearSelectedPerson ->
             { model | selectedPersonId = Nothing } ! []
@@ -164,14 +164,24 @@ update msg model =
             model ! [ getNeighbouringVoteEvents model ]
 
 
+handleVoteStateChangeWithRestart : Model -> ( Model, Cmd Msg )
+handleVoteStateChangeWithRestart =
+    handleVoteStateChange True
+
+
+handleVoteStateChangeWithoutRestart : Model -> ( Model, Cmd Msg )
+handleVoteStateChangeWithoutRestart =
+    handleVoteStateChange False
+
+
 {-|
 
     Handle in a standard way updating model and making HTTP requests/sending
     graph data through port, when either selected vote or Votes data changes.
 
 -}
-handleVoteStateChange : Model -> ( Model, Cmd Msg )
-handleVoteStateChange model =
+handleVoteStateChange : Bool -> Model -> ( Model, Cmd Msg )
+handleVoteStateChange restartSimulation model =
     case model.votes of
         Success votes ->
             case Votes.selected votes of
@@ -179,7 +189,7 @@ handleVoteStateChange model =
                     case vote.voteEvents of
                         Success voteEvents ->
                             { model | chartVoteId = Just vote.id }
-                                ! [ sendChartData model.selectedPersonId vote ]
+                                ! [ sendChartData restartSimulation model.selectedPersonId vote ]
 
                         NotAsked ->
                             let
@@ -265,9 +275,21 @@ getEventsForVote voteId =
         |> Cmd.map (VoteEventsResponse voteId)
 
 
-sendChartData : Maybe Int -> Vote -> Cmd msg
-sendChartData selectedPersonId vote =
-    Vote.encode selectedPersonId vote |> chartData
+sendChartData : Bool -> Maybe Int -> Vote -> Cmd msg
+sendChartData restartSimulation selectedPersonId vote =
+    encodeChartData restartSimulation selectedPersonId vote |> chartData
+
+
+encodeChartData : Bool -> Maybe Int -> Vote -> E.Value
+encodeChartData restartSimulation selectedPersonId vote =
+    let
+        voteEvents =
+            Vote.encode selectedPersonId vote
+    in
+    E.object
+        [ ( "voteEvents", voteEvents )
+        , ( "restartSimulation", E.bool restartSimulation )
+        ]
 
 
 

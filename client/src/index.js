@@ -10,7 +10,7 @@ const renderChart = data => {
   if (!chart) {
     chart = new BubbleChart(app, '#d3-simulation');
   }
-  chart.setNodes(data);
+  chart.setNodes(data.voteEvents, data.restartSimulation);
 };
 
 const chartElementExists = () => !!document.getElementById('d3-simulation');

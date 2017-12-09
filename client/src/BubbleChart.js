@@ -86,7 +86,7 @@ export default class BubbleChart {
     return -Math.pow(d.radius, 2.0) * forceStrength;
   }
 
-  setNodes(rawData) {
+  setNodes(rawData, restart = true) {
     this.nodes = rawData.map(d => {
       const currentNode = ((this.nodes &&
         this.nodes.filter(node => node.personId == d.personId)) ||
@@ -153,10 +153,12 @@ export default class BubbleChart {
     // Set the simulation's nodes to our newly created nodes array.
     this.simulation.nodes(this.nodes);
 
-    // Reset this so we re-inform the Elm app when the chart settles again.
-    this.chartSettled = false;
+    if (restart) {
+      // Reset this so we re-inform the Elm app when the chart settles again.
+      this.chartSettled = false;
 
-    // Reset the alpha value and restart the simulation
-    this.simulation.alpha(1).restart();
+      // Reset the alpha value and restart the simulation
+      this.simulation.alpha(1).restart();
+    }
   }
 }
