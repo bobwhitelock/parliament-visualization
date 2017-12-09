@@ -485,9 +485,6 @@ navigationButtons { previous, next } =
 
 
 
--- controls : Maybe Int -> Maybe Int -> Vote -> Html Msg
--- controls hoveredPersonId selectedPersonId currentVote =
-
 
 selectedPersonInfoBox : Maybe VoteEvent -> Maybe (Html Msg)
 selectedPersonInfoBox =
