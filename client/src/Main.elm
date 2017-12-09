@@ -10,6 +10,7 @@ import Http
 import Json.Decode as D
 import Json.Encode as E
 import Maybe.Extra
+import Policy
 import RemoteData exposing (RemoteData(..), WebData)
 import Svg
 import Svg.Attributes
@@ -48,6 +49,7 @@ type alias Model =
     , voteInput : String
     , hoveredPersonId : Maybe Int
     , selectedPersonId : Maybe Int
+    , filteredPolicyId : Maybe Policy.Id
     }
 
 
@@ -58,6 +60,7 @@ init =
       , voteInput = ""
       , hoveredPersonId = Nothing
       , selectedPersonId = Nothing
+      , filteredPolicyId = Nothing
       }
     , getInitialData
     )
@@ -84,6 +87,7 @@ type Msg
     | PersonNodeClicked Int
     | ClearSelectedPerson
     | ChartSettled ()
+    | FilterByPolicy Policy.Id
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -164,6 +168,9 @@ update msg model =
             -- reasonable compromise.
             model ! [ getNeighbouringVoteEvents model ]
 
+        FilterByPolicy policyId ->
+            { model | filteredPolicyId = Just policyId } ! []
+
 
 handleVoteStateChangeWithRestart : Model -> ( Model, Cmd Msg )
 handleVoteStateChangeWithRestart =
@@ -236,7 +243,7 @@ getNeighbouringVoteEvents model =
                 Just vote ->
                     let
                         { previous, next } =
-                            Votes.neighbouringVotes votes
+                            Votes.neighbouringVotes model.filteredPolicyId votes
                                 |> Maybe.withDefault
                                     { previous = Nothing, next = Nothing }
 
@@ -305,7 +312,7 @@ view : Model -> Html Msg
 view model =
     case model.votes of
         Success votes ->
-            viewVotes model.hoveredPersonId model.selectedPersonId votes
+            viewVotes votes model
 
         Failure error ->
             div [] [ "Error loading data: " ++ toString error |> text ]
@@ -317,9 +324,13 @@ view model =
             div [] [ text "Loading..." ]
 
 
-viewVotes : Maybe Int -> Maybe Int -> Votes -> Html Msg
-viewVotes hoveredPersonId selectedPersonId votes =
-    case ( Votes.selected votes, Votes.neighbouringVotes votes ) of
+viewVotes : Votes -> Model -> Html Msg
+viewVotes votes model =
+    let
+        { hoveredPersonId, selectedPersonId, filteredPolicyId } =
+            model
+    in
+    case ( Votes.selected votes, Votes.neighbouringVotes filteredPolicyId votes ) of
         ( Just current, Just neighbouringVotes ) ->
             let
                 currentEventForPersonId =
@@ -422,7 +433,7 @@ voteDescription vote details =
         span [] [ voteHtml, " " ++ details_ |> text ]
 
 
-currentVoteInfo : Votes -> Vote -> Html msg
+currentVoteInfo : Votes -> Vote -> Html Msg
 currentVoteInfo votes currentVote =
     let
         currentVotePolicies =
@@ -434,7 +445,11 @@ currentVoteInfo votes currentVote =
         policyButtons =
             List.map
                 (\policy ->
-                    button [ classes [ buttonColour ] ] [ text policy.title ]
+                    button
+                        [ classes [ buttonColour ]
+                        , onClick (FilterByPolicy policy.id)
+                        ]
+                        [ text policy.title ]
                 )
                 currentVotePolicies
     in

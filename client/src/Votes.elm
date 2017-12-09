@@ -34,9 +34,9 @@ type alias NeighbouringVotes =
     }
 
 
-neighbouringVotes : Votes -> Maybe NeighbouringVotes
-neighbouringVotes votes =
-    case timeOrdered votes of
+neighbouringVotes : Maybe Policy.Id -> Votes -> Maybe NeighbouringVotes
+neighbouringVotes filteredPolicyId votes =
+    case timeOrderedFilteredVotes filteredPolicyId votes of
         Just orderedVotes ->
             let
                 previousVote =
@@ -57,20 +57,32 @@ neighbouringVotes votes =
             Nothing
 
 
-timeOrdered : Votes -> Maybe (SelectList Vote)
-timeOrdered { selected, data } =
+timeOrderedFilteredVotes : Maybe Policy.Id -> Votes -> Maybe (SelectList Vote)
+timeOrderedFilteredVotes filteredPolicyId { selected, data } =
     -- XXX Remove use of SelectList here; not really necessary?
     let
         compare =
             \vote1 -> \vote2 -> Date.Extra.compare vote1.date vote2.date
 
-        orderedVotes =
+        orderedFilteredVotes =
             Dict.toList data
                 |> List.map Tuple.second
                 |> List.sortWith compare
+                |> filterVotes
+
+        filterVotes =
+            \votes ->
+                case filteredPolicyId of
+                    Just id ->
+                        List.filter
+                            (\vote -> List.member id vote.policyIds)
+                            votes
+
+                    Nothing ->
+                        votes
     in
     -- XXX Use SelectList.fromList once exists.
-    case ( List.head orderedVotes, List.tail orderedVotes ) of
+    case ( List.head orderedFilteredVotes, List.tail orderedFilteredVotes ) of
         ( Just head, Just tail ) ->
             SelectList.fromLists [] head tail
                 |> SelectList.select (\vote -> vote.id == selected)
