@@ -244,8 +244,6 @@ getNeighbouringVoteEvents model =
                     let
                         { previous, next } =
                             Votes.neighbouringVotes model.filteredPolicyId votes
-                                |> Maybe.withDefault
-                                    { previous = Nothing, next = Nothing }
 
                         maybeCmdToGet =
                             \maybeVote ->
@@ -330,8 +328,8 @@ viewVotes votes model =
         { hoveredPersonId, selectedPersonId, filteredPolicyId } =
             model
     in
-    case ( Votes.selected votes, Votes.neighbouringVotes filteredPolicyId votes ) of
-        ( Just current, Just neighbouringVotes ) ->
+    case Votes.selected votes of
+        Just current ->
             let
                 currentEventForPersonId =
                     Vote.eventForPersonId current
@@ -341,6 +339,9 @@ viewVotes votes model =
 
                 selectedPersonEvent =
                     currentEventForPersonId selectedPersonId
+
+                neighbouringVotes =
+                    Votes.neighbouringVotes filteredPolicyId votes
             in
             section
                 [ classes

@@ -34,7 +34,7 @@ type alias NeighbouringVotes =
     }
 
 
-neighbouringVotes : Maybe Policy.Id -> Votes -> Maybe NeighbouringVotes
+neighbouringVotes : Maybe Policy.Id -> Votes -> NeighbouringVotes
 neighbouringVotes filteredPolicyId votes =
     case timeOrderedFilteredVotes filteredPolicyId votes of
         Just orderedVotes ->
@@ -48,13 +48,12 @@ neighbouringVotes filteredPolicyId votes =
                     SelectList.after orderedVotes
                         |> List.head
             in
-            Just
-                { previous = previousVote
-                , next = nextVote
-                }
+            { previous = previousVote
+            , next = nextVote
+            }
 
         Nothing ->
-            Nothing
+            NeighbouringVotes Nothing Nothing
 
 
 timeOrderedFilteredVotes : Maybe Policy.Id -> Votes -> Maybe (SelectList Vote)
