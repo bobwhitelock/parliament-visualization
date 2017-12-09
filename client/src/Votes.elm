@@ -11,6 +11,7 @@ import Date.Extra
 import EveryDict as Dict exposing (EveryDict)
 import Json.Decode as D
 import Maybe.Extra
+import Policy exposing (Policy)
 import SelectList exposing (SelectList)
 import Vote exposing (Vote)
 
@@ -18,6 +19,7 @@ import Vote exposing (Vote)
 type alias Votes =
     { selected : Vote.Id
     , data : EveryDict Vote.Id Vote
+    , policies : EveryDict Policy.Id Policy
     }
 
 
@@ -82,23 +84,26 @@ decoder : D.Decoder Votes
 decoder =
     let
         createInitialVotes =
-            \( votes, latestVote ) ->
-                let
-                    -- Every Vote should have a date, but need to filter
-                    -- out any which somehow didn't to ensure this.
-                    votesWithDates =
-                        Maybe.Extra.values votes
-                in
-                case latestVote of
-                    Just latest ->
-                        Votes latest.id
-                            (createVotesDict votesWithDates
-                                |> Dict.insert latest.id latest
+            \votes ->
+                \latestVote ->
+                    \policies ->
+                        let
+                            -- Every Vote should have a date, but need to filter
+                            -- out any which somehow didn't to ensure this.
+                            votesWithDates =
+                                Maybe.Extra.values votes
+                        in
+                        Maybe.map
+                            (\latest ->
+                                Votes latest.id
+                                    (createVotesDict votesWithDates
+                                        |> Dict.insert latest.id latest
+                                    )
+                                    (createPoliciesDict policies)
+                                    |> Just
                             )
-                            |> D.succeed
-
-                    Nothing ->
-                        D.fail "Latest vote has no date!"
+                            latestVote
+                            |> Maybe.Extra.join
 
         createVotesDict =
             \votes ->
@@ -106,8 +111,25 @@ decoder =
                     (\vote -> ( vote.id, vote ))
                     votes
                     |> Dict.fromList
+
+        createPoliciesDict =
+            \policies ->
+                List.map
+                    (\policy -> ( policy.id, policy ))
+                    policies
+                    |> Dict.fromList
+
+        maybeVotesToDecoder =
+            \maybeVotes ->
+                case maybeVotes of
+                    Just votes ->
+                        D.succeed votes
+
+                    Nothing ->
+                        D.fail "Failed to decode initial data"
     in
-    D.map2 (,)
+    D.map3 createInitialVotes
         (D.field "votes" (D.list Vote.withoutEventsDecoder))
         (D.field "latestVote" Vote.withEventsDecoder)
-        |> D.andThen createInitialVotes
+        (D.field "policies" (D.list Policy.decoder))
+        |> D.andThen maybeVotesToDecoder

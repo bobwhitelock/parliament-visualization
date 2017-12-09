@@ -59,15 +59,15 @@ init =
       , hoveredPersonId = Nothing
       , selectedPersonId = Nothing
       }
-    , getInitialVotes
+    , getInitialData
     )
 
 
-getInitialVotes : Cmd Msg
-getInitialVotes =
-    Http.get "/votes" Votes.decoder
+getInitialData : Cmd Msg
+getInitialData =
+    Http.get "/initial-data" Votes.decoder
         |> RemoteData.sendRequest
-        |> Cmd.map InitialVotesResponse
+        |> Cmd.map InitialDataResponse
 
 
 
@@ -75,7 +75,7 @@ getInitialVotes =
 
 
 type Msg
-    = InitialVotesResponse (WebData Votes)
+    = InitialDataResponse (WebData Votes)
     | VoteEventsResponse Vote.Id (WebData (List VoteEvent))
     | VoteChanged String
     | ShowVote Vote.Id
@@ -89,7 +89,7 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        InitialVotesResponse votes ->
+        InitialDataResponse votes ->
             let
                 newModel =
                     { model | votes = votes }
@@ -98,7 +98,7 @@ update msg model =
 
         VoteEventsResponse voteId response ->
             case model.votes of
-                Success { selected, data } ->
+                Success { selected, data, policies } ->
                     let
                         newVotes =
                             Votes selected
@@ -107,6 +107,7 @@ update msg model =
                                     (Maybe.map (\vote -> { vote | voteEvents = response }))
                                     data
                                 )
+                                policies
                                 |> Success
 
                         newModel =
@@ -122,10 +123,10 @@ update msg model =
 
         ShowVote newVoteId ->
             case model.votes of
-                Success { data } ->
+                Success { data, policies } ->
                     let
                         newVotes =
-                            Votes newVoteId data |> Success
+                            Votes newVoteId data policies |> Success
 
                         newModel =
                             { model | votes = newVotes }
@@ -202,7 +203,11 @@ handleVoteStateChange restartSimulation model =
                                         votes.data
 
                                 newVotes =
-                                    Votes votes.selected newVotesData |> Success
+                                    Votes
+                                        votes.selected
+                                        newVotesData
+                                        votes.policies
+                                        |> Success
 
                                 newModel =
                                     { model | votes = newVotes }

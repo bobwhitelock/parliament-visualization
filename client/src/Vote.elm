@@ -13,6 +13,7 @@ import Date.Extra
 import Json.Decode as D
 import Json.Encode as E
 import List.Extra
+import Policy
 import RemoteData exposing (RemoteData(..), WebData)
 import VoteEvent exposing (VoteEvent)
 
@@ -23,6 +24,7 @@ type alias Vote =
     , actionsYes : String
     , actionsNo : String
     , date : Date
+    , policyIds : List Policy.Id
     , voteEvents : WebData (List VoteEvent)
     }
 
@@ -72,17 +74,18 @@ withEventsDecoder =
 
 createDecoder : D.Decoder (WebData (List VoteEvent)) -> D.Decoder (Maybe Vote)
 createDecoder voteEventsDecoder =
-    D.map6 createVote
+    D.map7 createVote
         (D.field "id" D.int |> D.map Id)
         (D.field "text" D.string)
         (D.field "actions_yes" D.string)
         (D.field "actions_no" D.string)
         (D.field "date" D.string)
+        (D.field "policyIds" (D.list (D.int |> D.map Policy.Id)))
         voteEventsDecoder
 
 
-createVote : Id -> String -> String -> String -> String -> WebData (List VoteEvent) -> Maybe Vote
-createVote id text actionsYes actionsNo date voteEvents =
+createVote : Id -> String -> String -> String -> String -> List Policy.Id -> WebData (List VoteEvent) -> Maybe Vote
+createVote id text actionsYes actionsNo date policyIds voteEvents =
     case Date.Extra.fromIsoString date of
         Just date_ ->
             Vote
@@ -91,6 +94,7 @@ createVote id text actionsYes actionsNo date voteEvents =
                 actionsYes
                 actionsNo
                 date_
+                policyIds
                 voteEvents
                 |> Just
 
