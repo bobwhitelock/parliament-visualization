@@ -267,7 +267,7 @@ getEventsForVote voteId =
 
 sendChartData : Maybe Int -> Vote -> Cmd msg
 sendChartData selectedPersonId vote =
-    Vote.chartDataValue selectedPersonId vote |> chartData
+    Vote.encode selectedPersonId vote |> chartData
 
 
 

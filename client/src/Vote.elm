@@ -24,8 +24,8 @@ type Id
     = Id Int
 
 
-chartDataValue : Maybe Int -> Vote -> E.Value
-chartDataValue selectedPersonId vote =
+encode : Maybe Int -> Vote -> E.Value
+encode selectedPersonId vote =
     case vote.voteEvents of
         Success events ->
             E.list (List.map (VoteEvent.encode selectedPersonId) events)
