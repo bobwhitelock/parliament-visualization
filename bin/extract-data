@@ -53,10 +53,10 @@ def load_votes
           # The same vote can appear multiple times for different policies; if
           # this is not the first time we've seen this vote then we just need
           # to save an association between this vote and the current policy.
-          DB[:votes_policies].insert({
+          link_vote_and_policy(
             vote_id: existing_vote[:id],
-            policy_id: policy_id,
-          })
+            policy_id: policy_id
+          )
 
           # No new vote events for bulk import below.
           nil
@@ -74,6 +74,8 @@ def load_votes
             actions_no: replace_html_entities(actions['no']),
             date: date,
           })
+
+          link_vote_and_policy(vote_id: vote_id, policy_id: policy_id)
 
           vote_events = motion['vote_events']
           raise if vote_events.length > 1
@@ -97,6 +99,13 @@ end
 
 def extract_person_id(id_string)
   id_string.match(PERSON_ID_REGEX)[1]
+end
+
+def link_vote_and_policy(vote_id:, policy_id:)
+  DB[:votes_policies].insert({
+    vote_id: vote_id,
+    policy_id: policy_id,
+  })
 end
 
 main
