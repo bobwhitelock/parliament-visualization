@@ -341,8 +341,10 @@ viewVotes hoveredPersonId selectedPersonId votes =
                     ]
                 ]
                 [ tachyons.css
-                , div [ classes [ fl, w_75 ] ]
+                , div
+                    [ classes [ fl, w_75 ] ]
                     [ currentVoteInfo current
+                    , nodeHoveredText hoveredPersonId selectedPersonId
                     , voteChart current
                     ]
                 , div [ classes [ fl, w_25 ] ]
@@ -390,7 +392,7 @@ voteChart vote =
             strong [] [ text "Absent or Both" ]
     in
     div
-        [ classes [ center, mw_100, pt5 ] ]
+        [ classes [ center, mw_100, pt4 ] ]
         [ chart
         , div [ classes [ tc ] ]
             [ span [ classes [ fl, w_40, border_box, pr4 ] ] [ ayeText ]
@@ -427,6 +429,26 @@ currentVoteInfo currentVote =
             ++ Date.Extra.toFormattedString "ddd MMMM, y" currentVote.date
             |> text
         ]
+
+
+nodeHoveredText : Maybe Int -> Maybe Int -> Html Msg
+nodeHoveredText hoveredPersonId selectedPersonId =
+    let
+        hoveredText =
+            Maybe.map
+                (\id ->
+                    if Just id == selectedPersonId then
+                        ""
+                    else
+                        "Click to Track"
+                )
+                hoveredPersonId
+                |> Maybe.withDefault ""
+    in
+    div
+        [ classes [ w_100, TC.h1, tc, gray ]
+        ]
+        [ text hoveredText ]
 
 
 navigationButtons : NeighbouringVotes -> Html Msg
