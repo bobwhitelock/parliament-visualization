@@ -5,6 +5,7 @@ import Color.Convert
 import Color.Manipulate
 import Json.Decode as D
 import Json.Encode as E
+import Maybe.Extra
 import VoteOption exposing (VoteOption)
 
 
@@ -27,10 +28,20 @@ decoder =
 
 encode : Maybe Int -> VoteEvent -> E.Value
 encode selectedPersonId event =
+    let
+        borderColourValue =
+            case personBorderColour selectedPersonId event of
+                Just colour ->
+                    E.string colour
+
+                Nothing ->
+                    E.null
+    in
     E.object
         [ ( "personId", E.int event.personId )
         , ( "name", E.string event.name )
         , ( "colour", personColour selectedPersonId event |> E.string )
+        , ( "borderColour", borderColourValue )
         , ( "option", toString event.option |> String.toLower |> E.string )
         ]
 
@@ -72,6 +83,31 @@ rawPersonColour maybeSelectedPersonId event =
     in
     Maybe.map alterColourIfSelected maybeSelectedPersonId
         |> Maybe.withDefault partyColour
+
+
+personBorderColour : Maybe Int -> VoteEvent -> Maybe String
+personBorderColour selectedPersonId voteEvent =
+    rawPersonBorderColour selectedPersonId voteEvent
+        |> Maybe.map Color.Convert.colorToHex
+
+
+rawPersonBorderColour : Maybe Int -> VoteEvent -> Maybe Color
+rawPersonBorderColour maybeSelectedPersonId event =
+    let
+        setBorderIfSelected =
+            \selectedPersonId ->
+                if event.personId == selectedPersonId then
+                    Just
+                        (if isSpeaker event then
+                            Color.white
+                         else
+                            Color.black
+                        )
+                else
+                    Nothing
+    in
+    Maybe.map setBorderIfSelected maybeSelectedPersonId
+        |> Maybe.Extra.join
 
 
 partyColour : VoteEvent -> String

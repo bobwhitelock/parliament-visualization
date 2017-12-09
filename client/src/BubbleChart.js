@@ -96,6 +96,7 @@ export default class BubbleChart {
         personId: d.personId,
         radius: 10,
         colour: d.colour,
+        borderColour: d.borderColour,
         option: d.option,
         x: currentNode ? currentNode.x : Math.random() * this.width,
         y: currentNode ? currentNode.y : Math.random() * this.height,
@@ -143,7 +144,8 @@ export default class BubbleChart {
         return d.colour;
       })
       .attr('stroke', function(d) {
-        return d3.rgb(d.colour).darker();
+        // Use border colour if given, or generate it if not.
+        return d.borderColour || d3.rgb(d.colour).darker();
       });
 
     // Fancy transition to make bubbles appear, ending with the correct radius
