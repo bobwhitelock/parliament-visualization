@@ -507,25 +507,41 @@ navigationButtons : NeighbouringVotes -> Html Msg
 navigationButtons { previous, next } =
     let
         previousVoteButton =
-            voteNavigationButton previous FeatherIcons.chevronLeft
+            voteNavigationButton
+                previous
+                FeatherIcons.chevronLeft
+                "earlier"
 
         nextVoteButton =
-            voteNavigationButton next FeatherIcons.chevronRight
+            voteNavigationButton
+                next
+                FeatherIcons.chevronRight
+                "later"
 
         voteNavigationButton =
             \maybeVote ->
                 \icon ->
-                    case maybeVote of
-                        Just { id } ->
-                            button
-                                [ onClick (ShowVote id)
-                                , classes [ w_50, buttonColour ]
-                                ]
-                                [ icon ]
+                    \relationText ->
+                        let
+                            titleText =
+                                String.join " "
+                                    [ "Show"
+                                    , relationText
+                                    , "vote"
+                                    ]
+                        in
+                        case maybeVote of
+                            Just { id } ->
+                                button
+                                    [ onClick (ShowVote id)
+                                    , classes [ w_50, buttonColour ]
+                                    , title titleText
+                                    ]
+                                    [ icon ]
 
-                        Nothing ->
-                            -- XXX Just disable button in this case instead?
-                            span [] []
+                            Nothing ->
+                                -- XXX Just disable button in this case instead?
+                                span [] []
     in
     div [ classes [ mb3 ] ]
         [ previousVoteButton
