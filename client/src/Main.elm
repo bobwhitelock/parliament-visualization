@@ -348,7 +348,7 @@ viewVotes hoveredPersonId selectedPersonId votes =
                 [ tachyons.css
                 , div
                     [ classes [ fl, w_75 ] ]
-                    [ currentVoteInfo current
+                    [ currentVoteInfo votes current
                     , nodeHoveredText hoveredPersonId selectedPersonId
                     , voteChart current
                     ]
@@ -397,7 +397,7 @@ voteChart vote =
             strong [] [ text "Absent or Both" ]
     in
     div
-        [ classes [ center, mw_100, pt4 ] ]
+        [ classes [ center, mw_100 ] ]
         [ chart
         , div [ classes [ tc ] ]
             [ span [ classes [ fl, w_40, border_box, pr4 ] ] [ ayeText ]
@@ -422,15 +422,30 @@ voteDescription vote details =
         span [] [ voteHtml, " " ++ details_ |> text ]
 
 
-currentVoteInfo : Vote -> Html msg
-currentVoteInfo currentVote =
+currentVoteInfo : Votes -> Vote -> Html msg
+currentVoteInfo votes currentVote =
+    let
+        currentVotePolicies =
+            List.map
+                (\policyId -> Dict.get policyId votes.policies)
+                currentVote.policyIds
+                |> Maybe.Extra.values
+
+        policyButtons =
+            List.map
+                (\policy ->
+                    button [ classes [ buttonColour ] ] [ text policy.title ]
+                )
+                currentVotePolicies
+    in
     div
-        [ classes [ TC.h3 ] ]
+        [ classes [ TC.h4 ] ]
         [ "Current vote: "
             ++ currentVote.text
             ++ " | "
             ++ Date.Extra.toFormattedString "ddd MMMM, y" currentVote.date
             |> text
+        , div [] policyButtons
         ]
 
 
@@ -470,7 +485,7 @@ navigationButtons { previous, next } =
                         Just { id } ->
                             button
                                 [ onClick (ShowVote id)
-                                , classes [ w_50, bg_white ]
+                                , classes [ w_50, buttonColour ]
                                 ]
                                 [ icon ]
 
@@ -484,6 +499,9 @@ navigationButtons { previous, next } =
         ]
 
 
+buttonColour : String
+buttonColour =
+    bg_white
 
 
 selectedPersonInfoBox : Maybe VoteEvent -> Maybe (Html Msg)
