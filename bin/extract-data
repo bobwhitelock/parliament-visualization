@@ -36,7 +36,10 @@ def load_votes
   progress_bar = ProgressBar.create(title: 'Extracting votes', total: raw_data.length)
 
   vote_events_data = raw_data.flat_map do |p|
-    policy_title = p['title']
+    policy_id = DB[:policies].insert({
+      title: replace_html_entities(p['title'].strip),
+      text: replace_html_entities(p['text'].strip),
+    })
 
     p['aspects'].flat_map do |a|
       motion = a['motion']
@@ -44,23 +47,41 @@ def load_votes
       # Only care about parliament votes.
       if motion['organization_id'] == 'uk.parliament.commons'
 
-        actions = motion['actions'] || {}
-        date = Date.strptime(motion['date'])
+        existing_vote = DB[:votes].where(motion_id: motion['id']).first
 
-        vote_id = DB[:votes].insert({
-          policy_title: policy_title,
-          text: replace_html_entities(motion['text']),
-          actions_yes: replace_html_entities(actions['yes']),
-          actions_no: replace_html_entities(actions['no']),
-          date: date,
-        })
+        if existing_vote
+          # The same vote can appear multiple times for different policies; if
+          # this is not the first time we've seen this vote then we just need
+          # to save an association between this vote and the current policy.
+          DB[:votes_policies].insert({
+            vote_id: existing_vote[:id],
+            policy_id: policy_id,
+          })
 
-        vote_events = motion['vote_events']
-        raise if vote_events.length > 1
+          # No new vote events for bulk import below.
+          nil
+        else
+          # This is the first time we've seen this vote; save it and all vote
+          # events.
 
-        vote_events.first['votes'].map do |vote|
-          person_id = extract_person_id(vote['id'])
-          [vote['option'], person_id, vote_id]
+          actions = motion['actions'] || {}
+          date = Date.strptime(motion['date'])
+
+          vote_id = DB[:votes].insert({
+            motion_id: motion['id'],
+            text: replace_html_entities(motion['text']),
+            actions_yes: replace_html_entities(actions['yes']),
+            actions_no: replace_html_entities(actions['no']),
+            date: date,
+          })
+
+          vote_events = motion['vote_events']
+          raise if vote_events.length > 1
+
+          vote_events.first['votes'].map do |vote|
+            person_id = extract_person_id(vote['id'])
+            [vote['option'], person_id, vote_id]
+          end
         end
       end
     end.reject(&:nil?).tap { progress_bar.increment }

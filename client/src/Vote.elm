@@ -11,7 +11,6 @@ import VoteEvent exposing (VoteEvent)
 
 type alias Vote =
     { id : Id
-    , policyTitle : String
     , text : String
     , actionsYes : String
     , actionsNo : String
@@ -52,29 +51,26 @@ withoutEventsDecoder =
     let
         initialVoteState =
             \id ->
-                \policyTitle ->
-                    \text ->
-                        \actionsYes ->
-                            \actionsNo ->
-                                \date ->
-                                    case Date.Extra.fromIsoString date of
-                                        Just date_ ->
-                                            Vote
-                                                id
-                                                policyTitle
-                                                text
-                                                actionsYes
-                                                actionsNo
-                                                date_
-                                                NotAsked
-                                                |> Just
+                \text ->
+                    \actionsYes ->
+                        \actionsNo ->
+                            \date ->
+                                case Date.Extra.fromIsoString date of
+                                    Just date_ ->
+                                        Vote
+                                            id
+                                            text
+                                            actionsYes
+                                            actionsNo
+                                            date_
+                                            NotAsked
+                                            |> Just
 
-                                        Nothing ->
-                                            Nothing
+                                    Nothing ->
+                                        Nothing
     in
-    D.map6 initialVoteState
+    D.map5 initialVoteState
         (D.field "id" D.int |> D.map Id)
-        (D.field "policy_title" D.string)
         (D.field "text" D.string)
         (D.field "actions_yes" D.string)
         (D.field "actions_no" D.string)
@@ -87,30 +83,27 @@ withEventsDecoder =
     let
         createVote =
             \id ->
-                \policyTitle ->
-                    \text ->
-                        \actionsYes ->
-                            \actionsNo ->
-                                \date ->
-                                    \voteEvents ->
-                                        case Date.Extra.fromIsoString date of
-                                            Just date_ ->
-                                                Vote
-                                                    id
-                                                    policyTitle
-                                                    text
-                                                    actionsYes
-                                                    actionsNo
-                                                    date_
-                                                    voteEvents
-                                                    |> Just
+                \text ->
+                    \actionsYes ->
+                        \actionsNo ->
+                            \date ->
+                                \voteEvents ->
+                                    case Date.Extra.fromIsoString date of
+                                        Just date_ ->
+                                            Vote
+                                                id
+                                                text
+                                                actionsYes
+                                                actionsNo
+                                                date_
+                                                voteEvents
+                                                |> Just
 
-                                            Nothing ->
-                                                Nothing
+                                        Nothing ->
+                                            Nothing
     in
-    D.map7 createVote
+    D.map6 createVote
         (D.field "id" D.int |> D.map Id)
-        (D.field "policy_title" D.string)
         (D.field "text" D.string)
         (D.field "actions_yes" D.string)
         (D.field "actions_no" D.string)

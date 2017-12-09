@@ -10,10 +10,16 @@ def main
 end
 
 def delete_any_existing_tables
-  DB.drop_table?(:vote_events, :votes, :people)
+  DB.drop_table?(:vote_events, :votes_policies, :votes, :people, :policies)
 end
 
 def create_tables
+  DB.create_table :policies do
+    primary_key :id
+    String :title
+    String :text
+  end
+
   DB.create_table :people do
     Integer :person_id, null: false
     Date :date, null: false
@@ -25,11 +31,16 @@ def create_tables
 
   DB.create_table :votes do
     primary_key :id
-    String :policy_title
+    String :motion_id, null: false, index: true
     String :text
     String :actions_yes
     String :actions_no
     Date :date
+  end
+
+  DB.create_table :votes_policies do
+    foreign_key :policy_id, :policies, null: false
+    foreign_key :vote_id, :votes, null: false
   end
 
   DB.create_table :vote_events do

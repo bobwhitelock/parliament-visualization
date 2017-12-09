@@ -422,8 +422,6 @@ currentVoteInfo currentVote =
     div
         [ classes [ TC.h3 ] ]
         [ "Current vote: "
-            ++ currentVote.policyTitle
-            ++ " | "
             ++ currentVote.text
             ++ " | "
             ++ Date.Extra.toFormattedString "ddd MMMM, y" currentVote.date
