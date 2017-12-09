@@ -14,7 +14,7 @@ import RemoteData exposing (RemoteData(..), WebData)
 import Svg
 import Svg.Attributes
 import Tachyons exposing (classes, tachyons)
-import Tachyons.Classes exposing (..)
+import Tachyons.Classes as TC exposing (..)
 import Vote exposing (Vote)
 import VoteEvent exposing (VoteEvent)
 import Votes exposing (NeighbouringVotes, Votes)
@@ -418,7 +418,7 @@ voteDescription vote details =
 currentVoteInfo : Vote -> Html msg
 currentVoteInfo currentVote =
     div
-        [ classes [ Tachyons.Classes.h3 ] ]
+        [ classes [ TC.h3 ] ]
         [ "Current vote: "
             ++ currentVote.policyTitle
             ++ " | "
@@ -536,7 +536,7 @@ personInfoBox showIcons event =
         [ classes
             [ br2
             , bg_white
-            , Tachyons.Classes.h5
+            , TC.h5
             , f3
             , tc
             , relative
