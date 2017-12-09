@@ -140,21 +140,15 @@ export default class BubbleChart {
 
     // Set/update all bubble colours.
     this.bubbles
-      .attr('fill', function(d) {
-        return d.colour;
-      })
-      .attr('stroke', function(d) {
-        // Use border colour if given, or generate it if not.
-        return d.borderColour || d3.rgb(d.colour).darker();
-      });
+      .attr('fill', d => d.colour)
+      // Use border colour if given, or generate it if not.
+      .attr('stroke', d => d.borderColour || d3.rgb(d.colour).darker());
 
     // Fancy transition to make bubbles appear, ending with the correct radius
     this.bubbles
       .transition()
       .duration(2000)
-      .attr('r', function(d) {
-        return d.radius;
-      });
+      .attr('r', d => d.radius);
 
     // Set the simulation's nodes to our newly created nodes array.
     this.simulation.nodes(this.nodes);
