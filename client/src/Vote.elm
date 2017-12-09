@@ -1,4 +1,12 @@
-module Vote exposing (..)
+module Vote
+    exposing
+        ( Id(..)
+        , Vote
+        , encode
+        , eventForPersonId
+        , withEventsDecoder
+        , withoutEventsDecoder
+        )
 
 import Date exposing (Date)
 import Date.Extra
@@ -48,64 +56,43 @@ eventForPersonId vote personId =
 
 withoutEventsDecoder : D.Decoder (Maybe Vote)
 withoutEventsDecoder =
-    let
-        initialVoteState =
-            \id ->
-                \text ->
-                    \actionsYes ->
-                        \actionsNo ->
-                            \date ->
-                                case Date.Extra.fromIsoString date of
-                                    Just date_ ->
-                                        Vote
-                                            id
-                                            text
-                                            actionsYes
-                                            actionsNo
-                                            date_
-                                            NotAsked
-                                            |> Just
-
-                                    Nothing ->
-                                        Nothing
-    in
-    D.map5 initialVoteState
-        (D.field "id" D.int |> D.map Id)
-        (D.field "text" D.string)
-        (D.field "actions_yes" D.string)
-        (D.field "actions_no" D.string)
-        (D.field "date" D.string)
+    createDecoder (D.succeed NotAsked)
 
 
 withEventsDecoder : D.Decoder (Maybe Vote)
 withEventsDecoder =
-    -- XXX de-duplicate this and above.
     let
-        createVote =
-            \id ->
-                \text ->
-                    \actionsYes ->
-                        \actionsNo ->
-                            \date ->
-                                \voteEvents ->
-                                    case Date.Extra.fromIsoString date of
-                                        Just date_ ->
-                                            Vote
-                                                id
-                                                text
-                                                actionsYes
-                                                actionsNo
-                                                date_
-                                                voteEvents
-                                                |> Just
-
-                                        Nothing ->
-                                            Nothing
+        voteEventsDecoder =
+            D.list VoteEvent.decoder
+                |> D.map Success
+                |> D.field "voteEvents"
     in
+    createDecoder voteEventsDecoder
+
+
+createDecoder : D.Decoder (WebData (List VoteEvent)) -> D.Decoder (Maybe Vote)
+createDecoder voteEventsDecoder =
     D.map6 createVote
         (D.field "id" D.int |> D.map Id)
         (D.field "text" D.string)
         (D.field "actions_yes" D.string)
         (D.field "actions_no" D.string)
         (D.field "date" D.string)
-        (D.field "voteEvents" (D.list VoteEvent.decoder |> D.map Success))
+        voteEventsDecoder
+
+
+createVote : Id -> String -> String -> String -> String -> WebData (List VoteEvent) -> Maybe Vote
+createVote id text actionsYes actionsNo date voteEvents =
+    case Date.Extra.fromIsoString date of
+        Just date_ ->
+            Vote
+                id
+                text
+                actionsYes
+                actionsNo
+                date_
+                voteEvents
+                |> Just
+
+        Nothing ->
+            Nothing
