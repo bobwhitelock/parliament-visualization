@@ -1,6 +1,7 @@
 port module Main exposing (..)
 
 import Date.Extra
+import DatePicker exposing (DatePicker)
 import EveryDict as Dict
 import FeatherIcons
 import Html exposing (..)
@@ -50,20 +51,27 @@ type alias Model =
     , hoveredPersonId : Maybe Int
     , selectedPersonId : Maybe Int
     , filteredPolicyId : Maybe Policy.Id
+    , datePicker : DatePicker
     }
 
 
 init : ( Model, Cmd Msg )
 init =
-    ( { votes = NotAsked
-      , chartVoteId = Nothing
-      , voteInput = ""
-      , hoveredPersonId = Nothing
-      , selectedPersonId = Nothing
-      , filteredPolicyId = Nothing
-      }
-    , getInitialData
-    )
+    let
+        ( datePicker, datePickerCmd ) =
+            DatePicker.init
+    in
+    { votes = NotAsked
+    , chartVoteId = Nothing
+    , voteInput = ""
+    , hoveredPersonId = Nothing
+    , selectedPersonId = Nothing
+    , filteredPolicyId = Nothing
+    , datePicker = datePicker
+    }
+        ! [ getInitialData
+          , Cmd.map DatePickerMsg datePickerCmd
+          ]
 
 
 getInitialData : Cmd Msg
@@ -89,6 +97,7 @@ type Msg
     | ChartSettled ()
     | FilterByPolicy Policy.Id
     | ClearPolicyFilter
+    | DatePickerMsg DatePicker.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -96,10 +105,38 @@ update msg model =
     case msg of
         InitialDataResponse votes ->
             let
-                newModel =
-                    { model | votes = votes }
+                currentVote =
+                    case votes of
+                        Success votes_ ->
+                            Votes.selected votes_
+
+                        _ ->
+                            Nothing
+
+                pickCurrentVoteDate =
+                    Maybe.map .date currentVote
+                        |> DatePicker.pick
+
+                -- Need to explicitly set date of current Vote in DatePicker,
+                -- otherwise will default to current date which may not have a
+                -- Vote on it.
+                ( newDatePicker, datePickerCmd, dateEvent ) =
+                    DatePicker.update
+                        (datePickerSettings model)
+                        pickCurrentVoteDate
+                        model.datePicker
+
+                datePickerCmd_ =
+                    Cmd.map DatePickerMsg datePickerCmd
+
+                ( newModel, initialCmd ) =
+                    handleVoteStateChangeWithRestart
+                        { model
+                            | votes = votes
+                            , datePicker = newDatePicker
+                        }
             in
-            handleVoteStateChangeWithRestart newModel
+            newModel ! [ initialCmd, datePickerCmd_ ]
 
         VoteEventsResponse voteId response ->
             case model.votes of
@@ -174,6 +211,61 @@ update msg model =
 
         ClearPolicyFilter ->
             { model | filteredPolicyId = Nothing } ! []
+
+        DatePickerMsg msg ->
+            case model.votes of
+                Success votes ->
+                    let
+                        ( newDatePicker, datePickerCmd, dateEvent ) =
+                            DatePicker.update
+                                (datePickerSettings model)
+                                msg
+                                model.datePicker
+
+                        newSelectedVoteId =
+                            case dateEvent of
+                                DatePicker.NoChange ->
+                                    Votes.selected votes |> Maybe.map .id
+
+                                DatePicker.Changed newDate ->
+                                    Maybe.map
+                                        (\date ->
+                                            Votes.filteredVotesOnDate
+                                                model.filteredPolicyId
+                                                votes
+                                                date
+                                                |> List.head
+                                        )
+                                        newDate
+                                        |> Maybe.Extra.join
+                                        |> Maybe.map .id
+
+                        ( newVotes, voteChangedCmd ) =
+                            case newSelectedVoteId of
+                                Just id ->
+                                    ( Success { votes | selected = id }
+                                    , handleVoteStateChangeWithRestart
+                                    )
+
+                                Nothing ->
+                                    ( Success votes
+                                    , \model -> ( model, Cmd.none )
+                                    )
+
+                        ( newModel, newCmd ) =
+                            { model
+                                | datePicker = newDatePicker
+                                , votes = newVotes
+                            }
+                                |> voteChangedCmd
+                    in
+                    newModel
+                        ! [ Cmd.map DatePickerMsg datePickerCmd
+                          , newCmd
+                          ]
+
+                _ ->
+                    model ! []
 
 
 handleVoteStateChangeWithRestart : Model -> ( Model, Cmd Msg )
@@ -306,6 +398,28 @@ encodeChartData restartSimulation selectedPersonId vote =
         ]
 
 
+datePickerSettings : Model -> DatePicker.Settings
+datePickerSettings { filteredPolicyId, votes } =
+    let
+        defaultSettings =
+            DatePicker.defaultSettings
+
+        isDisabled =
+            case votes of
+                Success votes_ ->
+                    Votes.filteredVotesOnDate filteredPolicyId votes_
+                        >> List.isEmpty
+
+                _ ->
+                    always True
+    in
+    { defaultSettings
+        | isDisabled = isDisabled
+        , dateFormatter = Date.Extra.toFormattedString "ddd MMMM, y"
+        , inputClassList = [ ( w_100, True ) ]
+    }
+
+
 
 ---- VIEW ----
 
@@ -346,6 +460,14 @@ viewVotes votes model =
 
                 neighbouringVotes =
                     Votes.neighbouringVotes filteredPolicyId votes
+
+                datePicker =
+                    DatePicker.view
+                        (Just current.date)
+                        (datePickerSettings model)
+                        model.datePicker
+                        |> Html.map DatePickerMsg
+                        |> Just
             in
             section
                 [ classes
@@ -371,7 +493,8 @@ viewVotes votes model =
                 , div [ classes [ fl, w_25 ] ]
                     [ div [ classes [ fr, w5 ] ]
                         (Maybe.Extra.values
-                            [ navigationButtons neighbouringVotes |> Just
+                            [ datePicker
+                            , navigationButtons neighbouringVotes |> Just
                             , selectedPersonInfoBox selectedPersonEvent
                             , hoveredPersonInfoBox hoveredPersonEvent
                             ]
@@ -474,11 +597,7 @@ currentVoteInfo filteredPolicyId votes currentVote =
     in
     div
         [ classes [ TC.h4 ] ]
-        [ "Current vote: "
-            ++ currentVote.text
-            ++ " | "
-            ++ Date.Extra.toFormattedString "ddd MMMM, y" currentVote.date
-            |> text
+        [ "Current vote: " ++ currentVote.text |> text
         , div [] policyButtons
         ]
 

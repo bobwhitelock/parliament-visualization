@@ -3,10 +3,12 @@ module Votes
         ( NeighbouringVotes
         , Votes
         , decoder
+        , filteredVotesOnDate
         , neighbouringVotes
         , selected
         )
 
+import Date exposing (Date)
 import Date.Extra
 import EveryDict as Dict exposing (EveryDict)
 import Json.Decode as D
@@ -89,6 +91,19 @@ timeOrderedFilteredVotes filteredPolicyId { selected, data } =
 
         _ ->
             Nothing
+
+
+filteredVotesOnDate : Maybe Policy.Id -> Votes -> Date -> List Vote
+filteredVotesOnDate filteredPolicyId votes date =
+    let
+        orderedFilteredVotes =
+            timeOrderedFilteredVotes filteredPolicyId votes
+                |> Maybe.map SelectList.toList
+    in
+    Maybe.map
+        (List.filter (\vote -> vote.date == date))
+        orderedFilteredVotes
+        |> Maybe.withDefault []
 
 
 decoder : D.Decoder Votes
