@@ -10,6 +10,7 @@ import Html.Events exposing (..)
 import Http
 import Json.Decode as D
 import Json.Encode as E
+import Keyboard
 import Maybe.Extra
 import Policy
 import RemoteData exposing (RemoteData(..), WebData)
@@ -90,6 +91,7 @@ type Msg
     | VoteEventsResponse Vote.Id (WebData (List VoteEvent))
     | VoteChanged String
     | ShowVote Vote.Id
+    | KeyPress Int
     | PersonNodeHovered Int
     | PersonNodeUnhovered Int
     | PersonNodeClicked Int
@@ -164,16 +166,30 @@ update msg model =
             { model | voteInput = input } ! []
 
         ShowVote newVoteId ->
-            case model.votes of
-                Success { data, policies } ->
-                    let
-                        newVotes =
-                            Votes newVoteId data policies |> Success
+            showVote model newVoteId
 
-                        newModel =
-                            { model | votes = newVotes }
+        KeyPress keyCode ->
+            case model.votes of
+                Success votes ->
+                    let
+                        maybeShowVote =
+                            Maybe.map (.id >> showVote model)
+                                >> Maybe.withDefault (model ! [])
+
+                        { previous, next } =
+                            Votes.neighbouringVotes model.filteredPolicyId votes
                     in
-                    handleVoteStateChangeWithRestart newModel
+                    case keyCode of
+                        -- Left arrow.
+                        37 ->
+                            maybeShowVote previous
+
+                        -- Right arrow.
+                        39 ->
+                            maybeShowVote next
+
+                        _ ->
+                            model ! []
 
                 _ ->
                     model ! []
@@ -266,6 +282,23 @@ update msg model =
 
                 _ ->
                     model ! []
+
+
+showVote : Model -> Vote.Id -> ( Model, Cmd Msg )
+showVote model voteId =
+    case model.votes of
+        Success { data, policies } ->
+            let
+                newVotes =
+                    Votes voteId data policies |> Success
+
+                newModel =
+                    { model | votes = newVotes }
+            in
+            handleVoteStateChangeWithRestart newModel
+
+        _ ->
+            model ! []
 
 
 handleVoteStateChangeWithRestart : Model -> ( Model, Cmd Msg )
@@ -824,6 +857,7 @@ subscriptions model =
         , personNodeUnhovered PersonNodeUnhovered
         , personNodeClicked PersonNodeClicked
         , chartSettled ChartSettled
+        , Keyboard.ups KeyPress
         ]
 
 
