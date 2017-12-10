@@ -158,7 +158,7 @@ update msg model =
             { model | selectedPersonId = Just personId } |> handleVoteStateChangeWithoutRestart
 
         ClearSelectedPerson ->
-            { model | selectedPersonId = Nothing } ! []
+            { model | selectedPersonId = Nothing } |> handleVoteStateChangeWithoutRestart
 
         ChartSettled _ ->
             -- Only request neighbouring vote events, if needed, once we are
