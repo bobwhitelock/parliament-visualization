@@ -4,12 +4,14 @@ module Votes
         , Votes
         , decoder
         , filteredVotesOnDate
+        , firstAndLastVoteYears
         , neighbouringVotes
         , selected
         )
 
 import Date exposing (Date)
 import Date.Extra
+import DatePicker
 import EveryDict as Dict exposing (EveryDict)
 import Json.Decode as D
 import Maybe.Extra
@@ -104,6 +106,33 @@ filteredVotesOnDate filteredPolicyId votes date =
         (List.filter (\vote -> vote.date == date))
         orderedFilteredVotes
         |> Maybe.withDefault []
+
+
+firstAndLastVoteYears : Maybe Policy.Id -> Votes -> ( Int, Int )
+firstAndLastVoteYears filteredPolicyId votes =
+    let
+        orderedFilteredVotes =
+            timeOrderedFilteredVotes filteredPolicyId votes
+
+        firstVoteYear =
+            voteYear List.head 1997
+
+        lastVoteYear =
+            voteYear (List.reverse >> List.head) 2017
+
+        voteYear =
+            \selectVote ->
+                \default ->
+                    Maybe.map
+                        (SelectList.toList
+                            >> selectVote
+                            >> Maybe.map (.date >> Date.year)
+                        )
+                        orderedFilteredVotes
+                        |> Maybe.Extra.join
+                        |> Maybe.withDefault default
+    in
+    ( firstVoteYear, lastVoteYear )
 
 
 decoder : D.Decoder Votes

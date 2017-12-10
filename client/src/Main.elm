@@ -400,24 +400,28 @@ encodeChartData restartSimulation selectedPersonId vote =
 
 datePickerSettings : Model -> DatePicker.Settings
 datePickerSettings { filteredPolicyId, votes } =
-    let
-        defaultSettings =
-            DatePicker.defaultSettings
+    case votes of
+        Success votes_ ->
+            let
+                defaultSettings =
+                    DatePicker.defaultSettings
 
-        isDisabled =
-            case votes of
-                Success votes_ ->
+                isDisabled =
                     Votes.filteredVotesOnDate filteredPolicyId votes_
                         >> List.isEmpty
 
-                _ ->
-                    always True
-    in
-    { defaultSettings
-        | isDisabled = isDisabled
-        , dateFormatter = Date.Extra.toFormattedString "ddd MMMM, y"
-        , inputClassList = [ ( w_100, True ) ]
-    }
+                ( firstYear, lastYear ) =
+                    Votes.firstAndLastVoteYears filteredPolicyId votes_
+            in
+            { defaultSettings
+                | isDisabled = isDisabled
+                , dateFormatter = Date.Extra.toFormattedString "ddd MMMM, y"
+                , inputClassList = [ ( w_100, True ) ]
+                , changeYear = DatePicker.between firstYear lastYear
+            }
+
+        _ ->
+            DatePicker.defaultSettings
 
 
 
