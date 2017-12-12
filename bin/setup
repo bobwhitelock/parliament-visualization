@@ -1,0 +1,9 @@
+#!/bin/bash
+set -euo pipefail
+IFS=$'\n\t'
+
+bundle install
+bin/retrieve-policies
+bin/retrieve-api-data
+bin/create-tables
+bin/extract-data

@@ -1,0 +1,8 @@
+#!/bin/bash
+set -euo pipefail
+IFS=$'\n\t'
+
+TWFY_POLICIES_JSON_URL=https://www.theyworkforyou.com/pwdata/scrapedjson/policy-motions/policies.json
+
+mkdir -p data
+curl "$TWFY_POLICIES_JSON_URL" > data/policies.json
