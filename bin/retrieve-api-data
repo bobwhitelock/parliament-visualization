@@ -22,7 +22,7 @@ def main
     File.exists?(mps_data_file(date: date))
   end
 
-  Parallel.map(vote_dates, progress: "Retrieving MPs API data") do |date|
+  Parallel.map(vote_dates, progress: "Retrieving MPs API data", in_threads: 4) do |date|
     data = retrieve_mps_data(date: date)
     data_file = mps_data_file(date: date)
     File.write(data_file, JSON.pretty_generate(data))
