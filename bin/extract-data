@@ -4,7 +4,7 @@ require 'nokogiri'
 require 'ruby-progressbar'
 require 'sequel'
 
-DB = Sequel.postgres(username: 'postgres')
+DB = Sequel.connect(ENV.fetch('DATABASE_URL'))
 MPS_FILE_DATE_REGEX = /data\/mps\/(\d{4})-(\d{1,2})-(\d{1,2})\.json/
 PERSON_ID_REGEX = /uk\.org\.publicwhip\/person\/(\d+)/
 

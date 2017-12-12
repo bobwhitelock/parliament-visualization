@@ -2,7 +2,7 @@
 require 'sinatra'
 require 'sequel'
 
-DB = Sequel.postgres(username: 'postgres')
+DB = Sequel.connect(ENV.fetch('DATABASE_URL'))
 
 
 get '/initial-data' do

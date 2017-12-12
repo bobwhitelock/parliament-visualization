@@ -2,7 +2,7 @@
 
 require 'sequel'
 
-DB = Sequel.postgres(username: 'postgres')
+DB = Sequel.connect(ENV.fetch('DATABASE_URL'))
 
 def main
   delete_any_existing_tables
