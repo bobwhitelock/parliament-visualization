@@ -4,6 +4,7 @@
   "main": "index.js",
   "license": "MIT",
   "dependencies": {
+    "create-elm-app": "^1.10.0",
     "d3": "^4.11.0"
   }
 }
