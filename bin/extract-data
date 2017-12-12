@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 
 require 'nokogiri'
-require 'progressbar'
+require 'ruby-progressbar'
 require 'sequel'
 
 DB = Sequel.postgres(username: 'postgres')
