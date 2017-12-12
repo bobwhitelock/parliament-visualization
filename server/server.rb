@@ -4,6 +4,9 @@ require 'sequel'
 
 DB = Sequel.connect(ENV.fetch('DATABASE_URL'))
 
+before do
+  headers 'Access-Control-Allow-Origin' => '*'
+end
 
 get '/initial-data' do
   latest_vote = with_policy_ids(DB[:votes].order(:date).last)
