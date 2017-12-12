@@ -1,7 +1,9 @@
 import {Main} from './Main.elm';
 import BubbleChart from './BubbleChart';
 
-const app = Main.embed(document.getElementById('root'));
+const app = Main.embed(document.getElementById('root'), {
+  apiUrl: process.env.ELM_APP_API_URL,
+});
 
 let chartExistenceIntervalId = null;
 let chart = null;

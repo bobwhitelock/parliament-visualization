@@ -53,11 +53,17 @@ type alias Model =
     , selectedPersonId : Maybe Int
     , filteredPolicyId : Maybe Policy.Id
     , datePicker : DatePicker
+    , config : Config
     }
 
 
-init : ( Model, Cmd Msg )
-init =
+type alias Config =
+    { apiUrl : String
+    }
+
+
+init : Config -> ( Model, Cmd Msg )
+init config =
     let
         ( datePicker, datePickerCmd ) =
             DatePicker.init
@@ -69,15 +75,20 @@ init =
     , selectedPersonId = Nothing
     , filteredPolicyId = Nothing
     , datePicker = datePicker
+    , config = config
     }
-        ! [ getInitialData
+        ! [ getInitialData config
           , Cmd.map DatePickerMsg datePickerCmd
           ]
 
 
-getInitialData : Cmd Msg
-getInitialData =
-    Http.get "/initial-data" Votes.decoder
+getInitialData : Config -> Cmd Msg
+getInitialData config =
+    let
+        url =
+            config.apiUrl ++ "/initial-data"
+    in
+    Http.get url Votes.decoder
         |> RemoteData.sendRequest
         |> Cmd.map InitialDataResponse
 
@@ -348,7 +359,7 @@ handleVoteStateChange restartSimulation model =
                                 newModel =
                                     { model | votes = newVotes }
                             in
-                            newModel ! [ getEventsForVote vote.id ]
+                            newModel ! [ getEventsForVote model.config vote.id ]
 
                         Failure _ ->
                             -- XXX Handle this somewhere?
@@ -376,7 +387,7 @@ getNeighbouringVoteEvents model =
 
                         maybeCmdToGet =
                             \maybeVote ->
-                                Maybe.map cmdToGetEvents maybeVote
+                                Maybe.map (cmdToGetEvents model.config) maybeVote
                                     |> Maybe.Extra.join
 
                         neighbouringVotesToGet =
@@ -392,24 +403,24 @@ getNeighbouringVoteEvents model =
             Cmd.none
 
 
-cmdToGetEvents : Vote -> Maybe (Cmd Msg)
-cmdToGetEvents vote =
+cmdToGetEvents : Config -> Vote -> Maybe (Cmd Msg)
+cmdToGetEvents config vote =
     if RemoteData.isNotAsked vote.voteEvents then
-        getEventsForVote vote.id |> Just
+        getEventsForVote config vote.id |> Just
     else
         Nothing
 
 
-getEventsForVote : Vote.Id -> Cmd Msg
-getEventsForVote voteId =
+getEventsForVote : Config -> Vote.Id -> Cmd Msg
+getEventsForVote config voteId =
     let
         (Vote.Id id) =
             voteId
 
-        path =
-            "/vote-events/" ++ toString id
+        url =
+            config.apiUrl ++ "/vote-events/" ++ toString id
     in
-    Http.get path (D.list VoteEvent.decoder)
+    Http.get url (D.list VoteEvent.decoder)
         |> RemoteData.sendRequest
         |> Cmd.map (VoteEventsResponse voteId)
 
@@ -865,9 +876,9 @@ subscriptions model =
 ---- PROGRAM ----
 
 
-main : Program Never Model Msg
+main : Program Config Model Msg
 main =
-    Html.program
+    Html.programWithFlags
         { view = view
         , init = init
         , update = update
