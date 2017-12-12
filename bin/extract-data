@@ -8,6 +8,10 @@ DB = Sequel.connect(ENV.fetch('DATABASE_URL'))
 MPS_FILE_DATE_REGEX = /data\/mps\/(\d{4})-(\d{1,2})-(\d{1,2})\.json/
 PERSON_ID_REGEX = /uk\.org\.publicwhip\/person\/(\d+)/
 
+# Number of records to commit per transaction for large imports, to avoid
+# server running out of memory.
+COMMIT_EVERY = 5000
+
 def main
   load_people
   load_votes
@@ -28,7 +32,11 @@ def load_people
   end
 
   puts 'Importing people...'
-  DB[:people].import([:person_id, :date, :name, :party], people_data)
+  DB[:people].import(
+    [:person_id, :date, :name, :party],
+    people_data,
+    commit_every: COMMIT_EVERY
+  )
 end
 
 def load_votes
@@ -90,7 +98,11 @@ def load_votes
   end
 
   puts 'Importing vote events...'
-  DB[:vote_events].import([:option, :person_id, :vote_id], vote_events_data)
+  DB[:vote_events].import(
+    [:option, :person_id, :vote_id],
+    vote_events_data,
+    commit_every: COMMIT_EVERY
+  )
 end
 
 def replace_html_entities(string)
