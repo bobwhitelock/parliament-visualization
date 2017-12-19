@@ -517,7 +517,16 @@ viewVotes votes model =
                         |> Html.map DatePickerMsg
                         |> Just
             in
-            div [ classes [ min_vh_100, mw9, bg_near_white, center ] ]
+            div
+                [ classes
+                    [ min_vh_100
+                    , mw9
+                    , bg_near_white
+                    , center
+                    , flex
+                    , flex_column
+                    ]
+                ]
                 [ section
                     [ classes
                         [ pa3
@@ -526,6 +535,7 @@ viewVotes votes model =
                         , lh_copy
                         , f4
                         , overflow_hidden
+                        , flex_auto
                         ]
                     ]
                     [ tachyons.css
