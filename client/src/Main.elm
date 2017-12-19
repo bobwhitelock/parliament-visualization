@@ -476,7 +476,7 @@ view : Model -> Html Msg
 view model =
     case model.votes of
         Success votes ->
-            viewVotes votes model
+            div [] [ page votes model ]
 
         Failure error ->
             div [] [ "Error loading data: " ++ toString error |> text ]
@@ -488,35 +488,10 @@ view model =
             div [] [ text "Loading..." ]
 
 
-viewVotes : Votes -> Model -> Html Msg
-viewVotes votes model =
-    let
-        { hoveredPersonId, selectedPersonId, filteredPolicyId } =
-            model
-    in
+page : Votes -> Model -> Html Msg
+page votes model =
     case Votes.selected votes of
         Just current ->
-            let
-                currentEventForPersonId =
-                    Vote.eventForPersonId current
-
-                hoveredPersonEvent =
-                    currentEventForPersonId hoveredPersonId
-
-                selectedPersonEvent =
-                    currentEventForPersonId selectedPersonId
-
-                neighbouringVotes =
-                    Votes.neighbouringVotes filteredPolicyId votes
-
-                datePicker =
-                    DatePicker.view
-                        (Just current.date)
-                        (datePickerSettings model)
-                        model.datePicker
-                        |> Html.map DatePickerMsg
-                        |> Just
-            in
             div
                 [ classes
                     [ min_vh_100
@@ -527,50 +502,69 @@ viewVotes votes model =
                     , flex_column
                     ]
                 ]
-                [ section
-                    [ classes
-                        [ pa3
-                        , ph5_ns
-                        , helvetica
-                        , lh_copy
-                        , f4
-                        , overflow_hidden
-                        , flex_auto
-                        ]
-                    ]
-                    [ tachyons.css
-                    , div
-                        [ classes [ fl, w_75 ] ]
-                        [ currentVoteInfo filteredPolicyId votes current
-                        , nodeHoveredText hoveredPersonId selectedPersonId
-                        , voteChart current
-                        ]
-                    , div [ classes [ fl, w_25 ] ]
-                        [ div [ classes [ fr, w5 ] ]
-                            (Maybe.Extra.values
-                                [ datePicker
-                                , navigationButtons neighbouringVotes |> Just
-                                , selectedPersonInfoBox selectedPersonEvent
-                                , hoveredPersonInfoBox hoveredPersonEvent
-                                ]
-                            )
-                        ]
-                    ]
-                , footer
-                    [ classes [ pv2, ph3, ph5_m, ph6_l ] ]
-                    [ div [ classes [ tc, mt3 ] ]
-                        (List.intersperse
-                            (text "·")
-                            [ footerLink "Built by Bob Whitelock" "https://github.com/bobwhitelock"
-                            , footerLink "Source on GitHub" "https://github.com/bobwhitelock/parliament-visualization"
-                            , footerLink "Data from TheyWorkForYou" "https://www.theyworkforyou.com"
-                            ]
-                        )
-                    ]
+                [ tachyons.css
+                , visualization current votes model
+                , pageFooter
                 ]
 
         _ ->
             div [] [ text "No votes available." ]
+
+
+visualization : Vote -> Votes -> Model -> Html Msg
+visualization currentVote votes model =
+    let
+        { hoveredPersonId, selectedPersonId, filteredPolicyId } =
+            model
+
+        currentEventForPersonId =
+            Vote.eventForPersonId currentVote
+
+        hoveredPersonEvent =
+            currentEventForPersonId hoveredPersonId
+
+        selectedPersonEvent =
+            currentEventForPersonId selectedPersonId
+
+        neighbouringVotes =
+            Votes.neighbouringVotes filteredPolicyId votes
+
+        datePicker =
+            DatePicker.view
+                (Just currentVote.date)
+                (datePickerSettings model)
+                model.datePicker
+                |> Html.map DatePickerMsg
+                |> Just
+    in
+    section
+        [ classes
+            [ pa3
+            , ph5_ns
+            , helvetica
+            , lh_copy
+            , f4
+            , overflow_hidden
+            , flex_auto
+            ]
+        ]
+        [ div
+            [ classes [ fl, w_75 ] ]
+            [ currentVoteInfo filteredPolicyId votes currentVote
+            , nodeHoveredText hoveredPersonId selectedPersonId
+            , voteChart currentVote
+            ]
+        , div [ classes [ fl, w_25 ] ]
+            [ div [ classes [ fr, w5 ] ]
+                (Maybe.Extra.values
+                    [ datePicker
+                    , navigationButtons neighbouringVotes |> Just
+                    , selectedPersonInfoBox selectedPersonEvent
+                    , hoveredPersonInfoBox hoveredPersonEvent
+                    ]
+                )
+            ]
+        ]
 
 
 voteChart : Vote -> Html msg
@@ -874,6 +868,20 @@ personImage event =
         , attribute "onerror" imageOnError
         ]
         []
+
+
+pageFooter : Html msg
+pageFooter =
+    footer [ classes [ pv2, ph3, ph5_m, ph6_l ] ]
+        [ div [ classes [ tc, mt3 ] ]
+            (List.intersperse
+                (text "·")
+                [ footerLink "Built by Bob Whitelock" "https://github.com/bobwhitelock"
+                , footerLink "Source on GitHub" "https://github.com/bobwhitelock/parliament-visualization"
+                , footerLink "Data from TheyWorkForYou" "https://www.theyworkforyou.com"
+                ]
+            )
+        ]
 
 
 footerLink : String -> String -> Html msg
