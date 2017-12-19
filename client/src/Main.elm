@@ -517,34 +517,43 @@ viewVotes votes model =
                         |> Html.map DatePickerMsg
                         |> Just
             in
-            section
-                [ classes
-                    [ min_vh_100
-                    , mw9
-                    , center
-                    , bg_near_white
-                    , pa3
-                    , ph5_ns
-                    , helvetica
-                    , lh_copy
-                    , f4
-                    , overflow_hidden
+            div [ classes [ min_vh_100, mw9, bg_near_white, center ] ]
+                [ section
+                    [ classes
+                        [ pa3
+                        , ph5_ns
+                        , helvetica
+                        , lh_copy
+                        , f4
+                        , overflow_hidden
+                        ]
                     ]
-                ]
-                [ tachyons.css
-                , div
-                    [ classes [ fl, w_75 ] ]
-                    [ currentVoteInfo filteredPolicyId votes current
-                    , nodeHoveredText hoveredPersonId selectedPersonId
-                    , voteChart current
+                    [ tachyons.css
+                    , div
+                        [ classes [ fl, w_75 ] ]
+                        [ currentVoteInfo filteredPolicyId votes current
+                        , nodeHoveredText hoveredPersonId selectedPersonId
+                        , voteChart current
+                        ]
+                    , div [ classes [ fl, w_25 ] ]
+                        [ div [ classes [ fr, w5 ] ]
+                            (Maybe.Extra.values
+                                [ datePicker
+                                , navigationButtons neighbouringVotes |> Just
+                                , selectedPersonInfoBox selectedPersonEvent
+                                , hoveredPersonInfoBox hoveredPersonEvent
+                                ]
+                            )
+                        ]
                     ]
-                , div [ classes [ fl, w_25 ] ]
-                    [ div [ classes [ fr, w5 ] ]
-                        (Maybe.Extra.values
-                            [ datePicker
-                            , navigationButtons neighbouringVotes |> Just
-                            , selectedPersonInfoBox selectedPersonEvent
-                            , hoveredPersonInfoBox hoveredPersonEvent
+                , footer
+                    [ classes [ pv2, ph3, ph5_m, ph6_l ] ]
+                    [ div [ classes [ tc, mt3 ] ]
+                        (List.intersperse
+                            (text "·")
+                            [ footerLink "Built by Bob Whitelock" "https://github.com/bobwhitelock"
+                            , footerLink "Source on GitHub" "https://github.com/bobwhitelock/parliament-visualization"
+                            , footerLink "Data from TheyWorkForYou" "https://www.theyworkforyou.com"
                             ]
                         )
                     ]
@@ -855,6 +864,16 @@ personImage event =
         , attribute "onerror" imageOnError
         ]
         []
+
+
+footerLink : String -> String -> Html msg
+footerLink name url =
+    a
+        [ classes [ f6, dib, ph2, link, mid_gray, dim ]
+        , href url
+        , title name
+        ]
+        [ text name ]
 
 
 
