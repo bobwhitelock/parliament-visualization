@@ -3,7 +3,6 @@ port module Main exposing (..)
 import Date.Extra
 import DatePicker exposing (DatePicker)
 import EveryDict as Dict
-import FeatherIcons
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
@@ -15,15 +14,15 @@ import Maybe.Extra
 import Policy
 import RemoteData exposing (RemoteData(..), WebData)
 import Select
-import Svg
-import Svg.Attributes
 import Tachyons exposing (classes, tachyons)
 import Tachyons.Classes as TC exposing (..)
+import View
 import View.Footer
+import View.Vote
 import View.VoteEvent
 import Vote exposing (Vote)
 import VoteEvent exposing (VoteEvent)
-import Votes exposing (NeighbouringVotes, Votes)
+import Votes exposing (Votes)
 
 
 -- PORTS --
@@ -584,6 +583,10 @@ visualization currentVote votes model =
                 model.datePicker
                 |> Html.map DatePickerMsg
                 |> Just
+
+        navigationButtons =
+            View.Vote.navigationButtons ShowVote neighbouringVotes
+                |> Just
     in
     section
         [ classes
@@ -600,13 +603,13 @@ visualization currentVote votes model =
             [ classes [ fl, w_75 ] ]
             [ currentVoteInfo filteredPolicyId votes currentVote
             , nodeHoveredText hoveredPersonId selectedPersonId
-            , voteChart currentVote
+            , View.Vote.chart currentVote
             ]
         , div [ classes [ fl, w_25 ] ]
             [ div [ classes [ fr, w5 ] ]
                 (Maybe.Extra.values
                     [ datePicker
-                    , navigationButtons neighbouringVotes |> Just
+                    , navigationButtons
                     , personSelect model currentVote selectedPersonEvent |> Just
                     , selectedPersonInfoBox selectedPersonEvent
                     , hoveredPersonInfoBox hoveredPersonEvent
@@ -614,61 +617,6 @@ visualization currentVote votes model =
                 )
             ]
         ]
-
-
-voteChart : Vote -> Html msg
-voteChart vote =
-    let
-        chartClasses =
-            if RemoteData.isLoading vote.voteEvents then
-                [ o_70 ]
-            else
-                []
-
-        chart =
-            div [ classes chartClasses ]
-                [ Svg.svg
-                    [ width 1000
-                    , height 550
-                    , id "d3-simulation"
-                    , Svg.Attributes.class "db center"
-                    ]
-                    []
-                ]
-
-        ayeText =
-            voteDescription "Aye" vote.actionsYes
-
-        noText =
-            voteDescription "No" vote.actionsNo
-
-        absentOrBothText =
-            strong [] [ text "Absent or Both" ]
-    in
-    div
-        [ classes [ center, mw_100 ] ]
-        [ chart
-        , div [ classes [ tc ] ]
-            [ span [ classes [ fl, w_40, border_box, pr4 ] ] [ ayeText ]
-            , span [ classes [ fl, w_20 ] ] [ absentOrBothText ]
-            , span [ classes [ fl, w_40, border_box, pl4 ] ] [ noText ]
-            ]
-        ]
-
-
-voteDescription : String -> String -> Html msg
-voteDescription vote details =
-    let
-        details_ =
-            String.trim details
-
-        voteHtml =
-            strong [] [ text vote ]
-    in
-    if String.isEmpty details_ then
-        voteHtml
-    else
-        span [] [ voteHtml, " " ++ details_ |> text ]
 
 
 currentVoteInfo : Maybe Policy.Id -> Votes -> Vote -> Html Msg
@@ -691,7 +639,7 @@ currentVoteInfo filteredPolicyId votes currentVote =
                                 , "Currently only showing votes related to this policy; click to show all votes"
                                 )
                             else
-                                ( buttonColour
+                                ( View.buttonColour
                                 , FilterByPolicy policy.id
                                 , "Only show votes related to this policy"
                                 )
@@ -730,55 +678,6 @@ nodeHoveredText hoveredPersonId selectedPersonId =
         [ classes [ w_100, TC.h1, tc, gray ]
         ]
         [ text hoveredText ]
-
-
-navigationButtons : NeighbouringVotes -> Html Msg
-navigationButtons { previous, next } =
-    let
-        previousVoteButton =
-            voteNavigationButton
-                previous
-                FeatherIcons.chevronLeft
-                "earlier"
-
-        nextVoteButton =
-            voteNavigationButton
-                next
-                FeatherIcons.chevronRight
-                "later"
-
-        voteNavigationButton =
-            \maybeVote icon relationText ->
-                let
-                    titleText =
-                        String.join " "
-                            [ "Show"
-                            , relationText
-                            , "vote"
-                            ]
-                in
-                case maybeVote of
-                    Just { id } ->
-                        button
-                            [ onClick (ShowVote id)
-                            , classes [ w_50, buttonColour ]
-                            , title titleText
-                            ]
-                            [ icon ]
-
-                    Nothing ->
-                        -- XXX Just disable button in this case instead?
-                        span [] []
-    in
-    div [ classes [ mt1, mb3 ] ]
-        [ previousVoteButton
-        , nextVoteButton
-        ]
-
-
-buttonColour : String
-buttonColour =
-    bg_white
 
 
 selectedPersonInfoBox : Maybe VoteEvent -> Maybe (Html Msg)
