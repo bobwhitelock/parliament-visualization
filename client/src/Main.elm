@@ -486,7 +486,7 @@ datePickerSettings { filteredPolicyId, votes } =
             { defaultSettings
                 | isDisabled = isDisabled
                 , dateFormatter = Date.Extra.toFormattedString "ddd MMMM, y"
-                , inputClassList = [ ( w_100, True ) ]
+                , inputClassList = [ ( w_100, True ), ( pa1, True ) ]
                 , changeYear = DatePicker.between firstYear lastYear
             }
 
@@ -770,7 +770,7 @@ navigationButtons { previous, next } =
                                 -- XXX Just disable button in this case instead?
                                 span [] []
     in
-    div [ classes [ mb3 ] ]
+    div [ classes [ mt1, mb3 ] ]
         [ previousVoteButton
         , nextVoteButton
         ]
