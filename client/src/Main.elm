@@ -20,6 +20,7 @@ import Svg.Attributes
 import Tachyons exposing (classes, tachyons)
 import Tachyons.Classes as TC exposing (..)
 import View.Footer
+import View.VoteEvent
 import Vote exposing (Vote)
 import VoteEvent exposing (VoteEvent)
 import Votes exposing (NeighbouringVotes, Votes)
@@ -782,132 +783,18 @@ buttonColour =
 
 selectedPersonInfoBox : Maybe VoteEvent -> Maybe (Html Msg)
 selectedPersonInfoBox =
-    maybePersonInfoBox True
+    View.VoteEvent.maybeInfoBox
+        { clearSelectedPersonMsg = ClearSelectedPerson
+        , showIcons = True
+        }
 
 
 hoveredPersonInfoBox : Maybe VoteEvent -> Maybe (Html Msg)
 hoveredPersonInfoBox =
-    maybePersonInfoBox False
-
-
-maybePersonInfoBox : Bool -> Maybe VoteEvent -> Maybe (Html Msg)
-maybePersonInfoBox showIcons =
-    Maybe.map (personInfoBox showIcons)
-
-
-personInfoBox : Bool -> VoteEvent -> Html Msg
-personInfoBox showIcons event =
-    let
-        textColour =
-            VoteEvent.partyComplementaryColour event
-
-        lockIcon =
-            iconButton left_0
-                FeatherIcons.lock
-                [ title "Stop tracking"
-                , onClick ClearSelectedPerson
-                ]
-
-        infoLinkIcon =
-            iconButton right_0
-                FeatherIcons.externalLink
-                [ title "View on TheyWorkForYou"
-                , href infoLink
-                ]
-
-        infoLink =
-            "https://www.theyworkforyou.com/mp/" ++ toString event.personId
-
-        iconButton =
-            \position icon attributes ->
-                if showIcons then
-                    Just
-                        (a
-                            ([ classes
-                                [ absolute
-                                , position
-                                , bottom_0
-                                , pa2
-                                , dim
-                                , textColour
-                                , pointer
-                                ]
-                             , style [ ( "color", textColour ) ]
-                             , target "_blank"
-                             ]
-                                ++ attributes
-                            )
-                            [ icon ]
-                        )
-                else
-                    Nothing
-    in
-    div
-        [ classes
-            [ br2
-            , bg_white
-            , TC.h5
-            , f3
-            , tc
-            , relative
-            , mb1
-            ]
-        , style [ ( "color", textColour ) ]
-        ]
-        (Maybe.Extra.values
-            [ Just (personInfo event)
-            , lockIcon
-            , infoLinkIcon
-            ]
-        )
-
-
-personInfo : VoteEvent -> Html msg
-personInfo event =
-    div
-        [ classes [ h_100 ]
-        , style [ ( "background-color", VoteEvent.partyColour event ) ]
-        ]
-        [ div [] [ text event.name ]
-        , personImage event
-        , div [] [ text event.party ]
-        ]
-
-
-personImage : VoteEvent -> Html msg
-personImage event =
-    let
-        primaryImageUrl =
-            imageUrl ".jpeg"
-
-        secondaryImageUrl =
-            imageUrl ".jpg"
-
-        imageOnError =
-            -- For some reason TWFY images mostly have a `jpeg` extension but
-            -- sometimes have `jpg`; if the former fails to load then attempt
-            -- to load the latter (see
-            -- https://stackoverflow.com/a/92819/2620402).
-            String.join ""
-                [ "this.onerror=null;this.src='"
-                , secondaryImageUrl
-                , "';"
-                ]
-
-        imageUrl =
-            \suffix ->
-                String.join ""
-                    [ "https://www.theyworkforyou.com/images/mps/"
-                    , toString event.personId
-                    , suffix
-                    ]
-    in
-    img
-        [ src primaryImageUrl
-        , height 100
-        , attribute "onerror" imageOnError
-        ]
-        []
+    View.VoteEvent.maybeInfoBox
+        { clearSelectedPersonMsg = ClearSelectedPerson
+        , showIcons = False
+        }
 
 
 personSelect : Model -> Vote -> Maybe VoteEvent -> Html Msg
