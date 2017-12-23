@@ -504,13 +504,11 @@ personSelectConfig =
         |> Select.withCutoff 12
         |> Select.withInputWrapperClass mb1
         |> (Select.withInputClass <| classes [ pa1, border_box ])
-        |> (Select.withItemClass <| classes [ pa1, bb, b__silver, gray, dim, f5 ])
+        |> Select.withItemHtml personSelectItem
         |> (Select.withMenuClass <| classes [ ba, b__gray, bg_white, w_100 ])
         |> Select.withNotFound "No matches"
         |> Select.withNotFoundClass red
-        -- Cannot use `withHighlightedItemClass` here as is overridden by
-        -- `withItemClass` (above).
-        |> Select.withHighlightedItemStyles [ ( "color", "black" ) ]
+        |> Select.withHighlightedItemClass o_50
         -- Hide clear button; not needed.
         |> Select.withClearClass dn
         |> Select.withPrompt "Enter MP to track"
@@ -933,6 +931,26 @@ personSelect { personSelectState, selectedPersonId } currentVote selectedPersonE
             voteEvents
             selectedPersonEvent
         )
+
+
+personSelectItem : VoteEvent -> Html Never
+personSelectItem voteEvent =
+    let
+        backgroundColour =
+            VoteEvent.partyColour voteEvent
+
+        textColour =
+            VoteEvent.partyComplementaryColour voteEvent
+    in
+    li
+        [ style
+            [ ( "background-color", backgroundColour )
+            , ( "color", textColour )
+            ]
+        , classes
+            [ pa1, bb, b__black, dim, f5, TC.list ]
+        ]
+        [ text voteEvent.name ]
 
 
 pageFooter : Html msg
