@@ -19,6 +19,7 @@ import Svg
 import Svg.Attributes
 import Tachyons exposing (classes, tachyons)
 import Tachyons.Classes as TC exposing (..)
+import View.Footer
 import Vote exposing (Vote)
 import VoteEvent exposing (VoteEvent)
 import Votes exposing (NeighbouringVotes, Votes)
@@ -550,7 +551,7 @@ page votes model =
                 ]
                 [ tachyons.css
                 , visualization current votes model
-                , pageFooter
+                , View.Footer.footer
                 ]
 
         _ ->
@@ -947,30 +948,6 @@ personSelectItem voteEvent =
             [ pa1, bb, b__black, dim, f5, TC.list ]
         ]
         [ text voteEvent.name ]
-
-
-pageFooter : Html msg
-pageFooter =
-    footer [ classes [ pv2, ph3, ph5_m, ph6_l ] ]
-        [ div [ classes [ tc, mt3 ] ]
-            (List.intersperse
-                (text "·")
-                [ footerLink "Built by Bob Whitelock" "https://github.com/bobwhitelock"
-                , footerLink "Source on GitHub" "https://github.com/bobwhitelock/parliament-visualization"
-                , footerLink "Data from TheyWorkForYou" "https://www.theyworkforyou.com"
-                ]
-            )
-        ]
-
-
-footerLink : String -> String -> Html msg
-footerLink name url =
-    a
-        [ classes [ f6, dib, ph2, link, mid_gray, dim ]
-        , href url
-        , title name
-        ]
-        [ text name ]
 
 
 
