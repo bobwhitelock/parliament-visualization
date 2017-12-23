@@ -65,7 +65,7 @@ timeOrderedFilteredVotes filteredPolicyId { selected, data } =
     -- XXX Remove use of SelectList here; not really necessary?
     let
         compare =
-            \vote1 -> \vote2 -> Date.Extra.compare vote1.date vote2.date
+            \vote1 vote2 -> Date.Extra.compare vote1.date vote2.date
 
         orderedFilteredVotes =
             Dict.toList data
@@ -121,16 +121,15 @@ firstAndLastVoteYears filteredPolicyId votes =
             voteYear (List.reverse >> List.head) 2017
 
         voteYear =
-            \selectVote ->
-                \default ->
-                    Maybe.map
-                        (SelectList.toList
-                            >> selectVote
-                            >> Maybe.map (.date >> Date.year)
-                        )
-                        orderedFilteredVotes
-                        |> Maybe.Extra.join
-                        |> Maybe.withDefault default
+            \selectVote default ->
+                Maybe.map
+                    (SelectList.toList
+                        >> selectVote
+                        >> Maybe.map (.date >> Date.year)
+                    )
+                    orderedFilteredVotes
+                    |> Maybe.Extra.join
+                    |> Maybe.withDefault default
     in
     ( firstVoteYear, lastVoteYear )
 
@@ -139,26 +138,24 @@ decoder : D.Decoder Votes
 decoder =
     let
         createInitialVotes =
-            \votes ->
-                \latestVote ->
-                    \policies ->
-                        let
-                            -- Every Vote should have a date, but need to filter
-                            -- out any which somehow didn't to ensure this.
-                            votesWithDates =
-                                Maybe.Extra.values votes
-                        in
-                        Maybe.map
-                            (\latest ->
-                                Votes latest.id
-                                    (createVotesDict votesWithDates
-                                        |> Dict.insert latest.id latest
-                                    )
-                                    (createPoliciesDict policies)
-                                    |> Just
+            \votes latestVote policies ->
+                let
+                    -- Every Vote should have a date, but need to filter
+                    -- out any which somehow didn't to ensure this.
+                    votesWithDates =
+                        Maybe.Extra.values votes
+                in
+                Maybe.map
+                    (\latest ->
+                        Votes latest.id
+                            (createVotesDict votesWithDates
+                                |> Dict.insert latest.id latest
                             )
-                            latestVote
-                            |> Maybe.Extra.join
+                            (createPoliciesDict policies)
+                            |> Just
+                    )
+                    latestVote
+                    |> Maybe.Extra.join
 
         createVotesDict =
             \votes ->

@@ -746,29 +746,27 @@ navigationButtons { previous, next } =
                 "later"
 
         voteNavigationButton =
-            \maybeVote ->
-                \icon ->
-                    \relationText ->
-                        let
-                            titleText =
-                                String.join " "
-                                    [ "Show"
-                                    , relationText
-                                    , "vote"
-                                    ]
-                        in
-                        case maybeVote of
-                            Just { id } ->
-                                button
-                                    [ onClick (ShowVote id)
-                                    , classes [ w_50, buttonColour ]
-                                    , title titleText
-                                    ]
-                                    [ icon ]
+            \maybeVote icon relationText ->
+                let
+                    titleText =
+                        String.join " "
+                            [ "Show"
+                            , relationText
+                            , "vote"
+                            ]
+                in
+                case maybeVote of
+                    Just { id } ->
+                        button
+                            [ onClick (ShowVote id)
+                            , classes [ w_50, buttonColour ]
+                            , title titleText
+                            ]
+                            [ icon ]
 
-                            Nothing ->
-                                -- XXX Just disable button in this case instead?
-                                span [] []
+                    Nothing ->
+                        -- XXX Just disable button in this case instead?
+                        span [] []
     in
     div [ classes [ mt1, mb3 ] ]
         [ previousVoteButton
@@ -820,30 +818,28 @@ personInfoBox showIcons event =
             "https://www.theyworkforyou.com/mp/" ++ toString event.personId
 
         iconButton =
-            \position ->
-                \icon ->
-                    \attributes ->
-                        if showIcons then
-                            Just
-                                (a
-                                    ([ classes
-                                        [ absolute
-                                        , position
-                                        , bottom_0
-                                        , pa2
-                                        , dim
-                                        , textColour
-                                        , pointer
-                                        ]
-                                     , style [ ( "color", textColour ) ]
-                                     , target "_blank"
-                                     ]
-                                        ++ attributes
-                                    )
-                                    [ icon ]
-                                )
-                        else
-                            Nothing
+            \position icon attributes ->
+                if showIcons then
+                    Just
+                        (a
+                            ([ classes
+                                [ absolute
+                                , position
+                                , bottom_0
+                                , pa2
+                                , dim
+                                , textColour
+                                , pointer
+                                ]
+                             , style [ ( "color", textColour ) ]
+                             , target "_blank"
+                             ]
+                                ++ attributes
+                            )
+                            [ icon ]
+                        )
+                else
+                    Nothing
     in
     div
         [ classes
