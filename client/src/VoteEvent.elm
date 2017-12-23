@@ -1,4 +1,11 @@
-module VoteEvent exposing (VoteEvent, decoder, encode, isSpeaker, partyColour)
+module VoteEvent
+    exposing
+        ( VoteEvent
+        , decoder
+        , encode
+        , partyColour
+        , partyComplementaryColour
+        )
 
 import Color exposing (Color)
 import Color.Convert
@@ -97,12 +104,7 @@ rawPersonBorderColour maybeSelectedPersonId event =
         setBorderIfSelected =
             \selectedPersonId ->
                 if event.personId == selectedPersonId then
-                    Just
-                        (if isSpeaker event then
-                            Color.white
-                         else
-                            Color.black
-                        )
+                    rawPartyComplementaryColour event |> Just
                 else
                     Nothing
     in
@@ -198,3 +200,18 @@ rawPartyColour event =
         unknown ->
             -- Should never occur since handling all parties in current data.
             Color.rgb 102 51 153
+
+
+partyComplementaryColour : VoteEvent -> String
+partyComplementaryColour =
+    rawPartyComplementaryColour >> Color.Convert.colorToHex
+
+
+rawPartyComplementaryColour : VoteEvent -> Color
+rawPartyComplementaryColour event =
+    if isSpeaker event then
+        -- Showing speaker's party colour as black, so show text as
+        -- white so can see it.
+        Color.white
+    else
+        Color.black

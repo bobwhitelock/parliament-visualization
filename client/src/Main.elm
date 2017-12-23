@@ -801,13 +801,8 @@ maybePersonInfoBox showIcons =
 personInfoBox : Bool -> VoteEvent -> Html Msg
 personInfoBox showIcons event =
     let
-        colour =
-            if VoteEvent.isSpeaker event then
-                -- Showing speaker's party colour as black, so show text as
-                -- white so can see it.
-                white
-            else
-                black
+        textColour =
+            VoteEvent.partyComplementaryColour event
 
         lockIcon =
             iconButton left_0
@@ -839,9 +834,10 @@ personInfoBox showIcons event =
                                         , bottom_0
                                         , pa2
                                         , dim
-                                        , colour
+                                        , textColour
                                         , pointer
                                         ]
+                                     , style [ ( "color", textColour ) ]
                                      , target "_blank"
                                      ]
                                         ++ attributes
@@ -859,9 +855,9 @@ personInfoBox showIcons event =
             , f3
             , tc
             , relative
-            , colour
             , mb1
             ]
+        , style [ ( "color", textColour ) ]
         ]
         (Maybe.Extra.values
             [ Just (personInfo event)
