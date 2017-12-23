@@ -14,6 +14,7 @@ import Keyboard
 import Maybe.Extra
 import Policy
 import RemoteData exposing (RemoteData(..), WebData)
+import Select
 import Svg
 import Svg.Attributes
 import Tachyons exposing (classes, tachyons)
@@ -53,6 +54,7 @@ type alias Model =
     , selectedPersonId : Maybe Int
     , filteredPolicyId : Maybe Policy.Id
     , datePicker : DatePicker
+    , personSelectState : Select.State
     , config : Config
     }
 
@@ -75,6 +77,7 @@ init config =
     , selectedPersonId = Nothing
     , filteredPolicyId = Nothing
     , datePicker = datePicker
+    , personSelectState = Select.newState "personSelect"
     , config = config
     }
         ! [ getInitialData config
@@ -110,6 +113,8 @@ type Msg
     | ChartSettled ()
     | FilterByPolicy Policy.Id
     | ClearPolicyFilter
+    | SelectPerson (Maybe VoteEvent)
+    | PersonSelectMsg (Select.Msg VoteEvent)
     | DatePickerMsg DatePicker.Msg
 
 
@@ -219,7 +224,7 @@ update msg model =
             newModel ! []
 
         PersonNodeClicked personId ->
-            { model | selectedPersonId = Just personId } |> handleVoteStateChangeWithoutRestart
+            selectPerson model personId
 
         ClearSelectedPerson ->
             { model | selectedPersonId = Nothing } |> handleVoteStateChangeWithoutRestart
@@ -238,6 +243,21 @@ update msg model =
 
         ClearPolicyFilter ->
             { model | filteredPolicyId = Nothing } ! []
+
+        SelectPerson maybeVoteEvent ->
+            case maybeVoteEvent of
+                Just voteEvent ->
+                    selectPerson model voteEvent.personId
+
+                Nothing ->
+                    model ! []
+
+        PersonSelectMsg msg ->
+            let
+                ( newSelectState, cmd ) =
+                    Select.update personSelectConfig msg model.personSelectState
+            in
+            { model | personSelectState = newSelectState } ! [ cmd ]
 
         DatePickerMsg msg ->
             case model.votes of
@@ -310,6 +330,12 @@ showVote model voteId =
 
         _ ->
             model ! []
+
+
+selectPerson : Model -> Int -> ( Model, Cmd Msg )
+selectPerson model personId =
+    { model | selectedPersonId = Just personId }
+        |> handleVoteStateChangeWithoutRestart
 
 
 handleVoteStateChangeWithRestart : Model -> ( Model, Cmd Msg )
@@ -468,6 +494,28 @@ datePickerSettings { filteredPolicyId, votes } =
             DatePicker.defaultSettings
 
 
+personSelectConfig : Select.Config Msg VoteEvent
+personSelectConfig =
+    let
+        classes =
+            String.join " "
+    in
+    Select.newConfig SelectPerson .name
+        |> Select.withCutoff 12
+        |> Select.withInputWrapperClass mb1
+        |> (Select.withInputClass <| classes [ pa1, border_box ])
+        |> (Select.withItemClass <| classes [ pa1, bb, b__silver, gray, dim, f5 ])
+        |> (Select.withMenuClass <| classes [ ba, b__gray, bg_white, w_100 ])
+        |> Select.withNotFound "No matches"
+        |> Select.withNotFoundClass red
+        -- Cannot use `withHighlightedItemClass` here as is overridden by
+        -- `withItemClass` (above).
+        |> Select.withHighlightedItemStyles [ ( "color", "black" ) ]
+        -- Hide clear button; not needed.
+        |> Select.withClearClass dn
+        |> Select.withPrompt "Enter MP to track"
+
+
 
 ---- VIEW ----
 
@@ -559,6 +607,7 @@ visualization currentVote votes model =
                 (Maybe.Extra.values
                     [ datePicker
                     , navigationButtons neighbouringVotes |> Just
+                    , personSelect model currentVote selectedPersonEvent |> Just
                     , selectedPersonInfoBox selectedPersonEvent
                     , hoveredPersonInfoBox hoveredPersonEvent
                     ]
@@ -868,6 +917,26 @@ personImage event =
         , attribute "onerror" imageOnError
         ]
         []
+
+
+personSelect : Model -> Vote -> Maybe VoteEvent -> Html Msg
+personSelect { personSelectState, selectedPersonId } currentVote selectedPersonEvent =
+    let
+        voteEvents =
+            case currentVote.voteEvents of
+                Success voteEvents ->
+                    voteEvents
+
+                _ ->
+                    []
+    in
+    Html.map PersonSelectMsg
+        (Select.view
+            personSelectConfig
+            personSelectState
+            voteEvents
+            selectedPersonEvent
+        )
 
 
 pageFooter : Html msg
