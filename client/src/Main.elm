@@ -50,7 +50,6 @@ port personNodeClicked : (Int -> msg) -> Sub msg
 type alias Model =
     { votes : WebData Votes
     , chartVoteId : Maybe Vote.Id
-    , voteInput : String
     , hoveredPersonId : Maybe Int
     , selectedPersonId : Maybe Int
     , filteredPolicyId : Maybe Policy.Id
@@ -73,7 +72,6 @@ init config =
     in
     { votes = NotAsked
     , chartVoteId = Nothing
-    , voteInput = ""
     , hoveredPersonId = Nothing
     , selectedPersonId = Nothing
     , filteredPolicyId = Nothing
@@ -104,7 +102,6 @@ getInitialData config =
 type Msg
     = InitialDataResponse (WebData Votes)
     | VoteEventsResponse Vote.Id (WebData (List VoteEvent))
-    | VoteChanged String
     | ShowVote Vote.Id
     | KeyPress Int
     | PersonNodeHovered Int
@@ -178,9 +175,6 @@ update msg model =
 
                 _ ->
                     model ! []
-
-        VoteChanged input ->
-            { model | voteInput = input } ! []
 
         ShowVote newVoteId ->
             showVote model newVoteId
