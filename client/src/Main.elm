@@ -1,5 +1,6 @@
 port module Main exposing (..)
 
+import Date exposing (Date)
 import Date.Extra
 import DatePicker exposing (DatePicker)
 import EveryDict as Dict
@@ -129,21 +130,14 @@ update msg model =
                         _ ->
                             Nothing
 
-                pickCurrentVoteDate =
+                currentVoteDate =
                     Maybe.map .date currentVote
-                        |> DatePicker.pick
 
                 -- Need to explicitly set date of current Vote in DatePicker,
                 -- otherwise will default to current date which may not have a
                 -- Vote on it.
-                ( newDatePicker, datePickerCmd, dateEvent ) =
-                    DatePicker.update
-                        (datePickerSettings model)
-                        pickCurrentVoteDate
-                        model.datePicker
-
-                datePickerCmd_ =
-                    Cmd.map DatePickerMsg datePickerCmd
+                ( newDatePicker, datePickerCmd ) =
+                    pickDatePickerDate model currentVoteDate
 
                 ( newModel, initialCmd ) =
                     handleVoteStateChangeWithRestart
@@ -152,7 +146,7 @@ update msg model =
                             , datePicker = newDatePicker
                         }
             in
-            newModel ! [ initialCmd, datePickerCmd_ ]
+            newModel ! [ initialCmd, datePickerCmd ]
 
         VoteEventsResponse voteId response ->
             case model.votes of
@@ -461,6 +455,20 @@ encodeChartData restartSimulation selectedPersonId vote =
         [ ( "voteEvents", voteEvents )
         , ( "restartSimulation", E.bool restartSimulation )
         ]
+
+
+pickDatePickerDate : Model -> Maybe Date -> ( DatePicker, Cmd Msg )
+pickDatePickerDate model date =
+    let
+        ( newDatePicker, datePickerCmd, dateEvent ) =
+            DatePicker.update
+                (datePickerSettings model)
+                (DatePicker.pick date)
+                model.datePicker
+    in
+    ( newDatePicker
+    , Cmd.map DatePickerMsg datePickerCmd
+    )
 
 
 datePickerSettings : Model -> DatePicker.Settings
