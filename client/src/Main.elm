@@ -351,8 +351,18 @@ handleVoteStateChange restartSimulation model =
                 Just vote ->
                     case vote.voteEvents of
                         Success voteEvents ->
-                            { model | chartVoteId = Just vote.id }
-                                ! [ sendChartData restartSimulation model.selectedPersonId vote ]
+                            let
+                                updateChartCmd =
+                                    sendChartData restartSimulation model.selectedPersonId vote
+
+                                ( newDatePicker, datePickerCmd ) =
+                                    Just vote.date |> pickDatePickerDate model
+                            in
+                            { model
+                                | chartVoteId = Just vote.id
+                                , datePicker = newDatePicker
+                            }
+                                ! [ updateChartCmd ]
 
                         NotAsked ->
                             let
