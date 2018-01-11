@@ -22,7 +22,7 @@ import View.Footer
 import View.Vote
 import View.VoteEvent
 import Vote exposing (Vote)
-import VoteEvent exposing (VoteEvent)
+import VoteEvent exposing (PersonId, VoteEvent)
 import Votes exposing (Votes)
 
 
@@ -51,8 +51,8 @@ port personNodeClicked : (Int -> msg) -> Sub msg
 type alias Model =
     { votes : WebData Votes
     , chartVoteId : Maybe Vote.Id
-    , hoveredPersonId : Maybe Int
-    , selectedPersonId : Maybe Int
+    , hoveredPersonId : Maybe PersonId
+    , selectedPersonId : Maybe PersonId
     , filteredPolicyId : Maybe Policy.Id
     , datePicker : DatePicker
     , personSelectState : Select.State
@@ -200,12 +200,18 @@ update msg model =
                     model ! []
 
         PersonNodeHovered personId ->
-            { model | hoveredPersonId = Just personId } ! []
+            { model
+                | hoveredPersonId = VoteEvent.personId personId |> Just
+            }
+                ! []
 
         PersonNodeUnhovered personId ->
             let
+                taggedPersonId =
+                    VoteEvent.personId personId
+
                 newModel =
-                    if model.hoveredPersonId == Just personId then
+                    if model.hoveredPersonId == Just taggedPersonId then
                         { model | hoveredPersonId = Nothing }
                     else
                         model
@@ -213,7 +219,7 @@ update msg model =
             newModel ! []
 
         PersonNodeClicked personId ->
-            selectPerson model personId
+            VoteEvent.personId personId |> selectPerson model
 
         ClearSelectedPerson ->
             { model | selectedPersonId = Nothing } |> handleVoteStateChangeWithoutRestart
@@ -321,7 +327,7 @@ showVote model voteId =
             model ! []
 
 
-selectPerson : Model -> Int -> ( Model, Cmd Msg )
+selectPerson : Model -> PersonId -> ( Model, Cmd Msg )
 selectPerson model personId =
     { model | selectedPersonId = Just personId }
         |> handleVoteStateChangeWithoutRestart
@@ -440,12 +446,12 @@ getEventsForVote config voteId =
         |> Cmd.map (VoteEventsResponse voteId)
 
 
-sendChartData : Bool -> Maybe Int -> Vote -> Cmd msg
+sendChartData : Bool -> Maybe PersonId -> Vote -> Cmd msg
 sendChartData restartSimulation selectedPersonId vote =
     encodeChartData restartSimulation selectedPersonId vote |> chartData
 
 
-encodeChartData : Bool -> Maybe Int -> Vote -> E.Value
+encodeChartData : Bool -> Maybe PersonId -> Vote -> E.Value
 encodeChartData restartSimulation selectedPersonId vote =
     let
         voteEvents =
@@ -662,7 +668,7 @@ currentVoteInfo filteredPolicyId votes currentVote =
         ]
 
 
-nodeHoveredText : Maybe Int -> Maybe Int -> Html Msg
+nodeHoveredText : Maybe PersonId -> Maybe PersonId -> Html Msg
 nodeHoveredText hoveredPersonId selectedPersonId =
     let
         hoveredText =

@@ -15,7 +15,7 @@ import Json.Encode as E
 import List.Extra
 import Policy
 import RemoteData exposing (RemoteData(..), WebData)
-import VoteEvent exposing (VoteEvent)
+import VoteEvent exposing (PersonId, VoteEvent)
 
 
 type alias Vote =
@@ -33,7 +33,7 @@ type Id
     = Id Int
 
 
-encode : Maybe Int -> Vote -> E.Value
+encode : Maybe PersonId -> Vote -> E.Value
 encode selectedPersonId vote =
     case vote.voteEvents of
         Success events ->
@@ -44,7 +44,7 @@ encode selectedPersonId vote =
             E.null
 
 
-eventForPersonId : Vote -> Maybe Int -> Maybe VoteEvent
+eventForPersonId : Vote -> Maybe PersonId -> Maybe VoteEvent
 eventForPersonId vote personId =
     case ( vote.voteEvents, personId ) of
         ( Success events, Just personId_ ) ->

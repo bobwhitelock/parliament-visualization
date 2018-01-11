@@ -1,10 +1,12 @@
 module VoteEvent
     exposing
-        ( VoteEvent
+        ( PersonId
+        , VoteEvent
         , decoder
         , encode
         , partyColour
         , partyComplementaryColour
+        , personId
         )
 
 import Color exposing (Color)
@@ -13,27 +15,41 @@ import Color.Manipulate
 import Json.Decode as D
 import Json.Encode as E
 import Maybe.Extra
+import Tagged exposing (Tagged)
 import VoteOption exposing (VoteOption)
 
 
 type alias VoteEvent =
-    { personId : Int
+    { personId : PersonId
     , name : String
     , party : String
     , option : VoteOption
     }
 
 
+type alias PersonId =
+    Tagged PersonIdTag Int
+
+
+type PersonIdTag
+    = PersonIdTag
+
+
+personId : Int -> PersonId
+personId =
+    Tagged.tag
+
+
 decoder : D.Decoder VoteEvent
 decoder =
     D.map4 VoteEvent
-        (D.field "person_id" D.int)
+        (D.field "person_id" D.int |> D.map Tagged.tag)
         (D.field "name" D.string)
         (D.field "party" D.string)
         (D.field "option" VoteOption.decoder)
 
 
-encode : Maybe Int -> VoteEvent -> E.Value
+encode : Maybe PersonId -> VoteEvent -> E.Value
 encode selectedPersonId event =
     let
         borderColourValue =
@@ -45,7 +61,7 @@ encode selectedPersonId event =
                     E.null
     in
     E.object
-        [ ( "personId", E.int event.personId )
+        [ ( "personId", Tagged.untag event.personId |> E.int )
         , ( "name", E.string event.name )
         , ( "colour", personColour selectedPersonId event |> E.string )
         , ( "borderColour", borderColourValue )
@@ -70,12 +86,12 @@ isSpeaker event =
             False
 
 
-personColour : Maybe Int -> VoteEvent -> String
+personColour : Maybe PersonId -> VoteEvent -> String
 personColour selectedPersonId =
     rawPersonColour selectedPersonId >> Color.Convert.colorToHex
 
 
-rawPersonColour : Maybe Int -> VoteEvent -> Color
+rawPersonColour : Maybe PersonId -> VoteEvent -> Color
 rawPersonColour maybeSelectedPersonId event =
     let
         partyColour =
@@ -92,13 +108,13 @@ rawPersonColour maybeSelectedPersonId event =
         |> Maybe.withDefault partyColour
 
 
-personBorderColour : Maybe Int -> VoteEvent -> Maybe String
+personBorderColour : Maybe PersonId -> VoteEvent -> Maybe String
 personBorderColour selectedPersonId voteEvent =
     rawPersonBorderColour selectedPersonId voteEvent
         |> Maybe.map Color.Convert.colorToHex
 
 
-rawPersonBorderColour : Maybe Int -> VoteEvent -> Maybe Color
+rawPersonBorderColour : Maybe PersonId -> VoteEvent -> Maybe Color
 rawPersonBorderColour maybeSelectedPersonId event =
     let
         setBorderIfSelected =

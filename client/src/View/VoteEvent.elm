@@ -7,6 +7,7 @@ import Html.Events exposing (..)
 import Maybe.Extra
 import Tachyons exposing (classes)
 import Tachyons.Classes as TC exposing (..)
+import Tagged
 import VoteEvent exposing (VoteEvent)
 
 
@@ -42,7 +43,7 @@ infoBox { clearSelectedPersonMsg, showIcons } event =
                 ]
 
         infoLink =
-            "https://www.theyworkforyou.com/mp/" ++ toString event.personId
+            "https://www.theyworkforyou.com/mp/" ++ personIdString event
 
         iconButton =
             \position icon attributes ->
@@ -124,7 +125,7 @@ personImage event =
             \suffix ->
                 String.join ""
                     [ "https://www.theyworkforyou.com/images/mps/"
-                    , toString event.personId
+                    , personIdString event
                     , suffix
                     ]
     in
@@ -134,3 +135,8 @@ personImage event =
         , attribute "onerror" imageOnError
         ]
         []
+
+
+personIdString : VoteEvent -> String
+personIdString event =
+    Tagged.untag event.personId |> toString
