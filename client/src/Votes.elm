@@ -11,7 +11,6 @@ module Votes
 
 import Date exposing (Date)
 import Date.Extra
-import DatePicker
 import EveryDict as Dict exposing (EveryDict)
 import Json.Decode as D
 import Maybe.Extra
