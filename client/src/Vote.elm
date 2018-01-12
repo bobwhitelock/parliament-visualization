@@ -1,6 +1,6 @@
 module Vote
     exposing
-        ( Id(..)
+        ( Id
         , Vote
         , encode
         , eventForPersonId
@@ -15,6 +15,7 @@ import Json.Encode as E
 import List.Extra
 import Policy
 import RemoteData exposing (RemoteData(..), WebData)
+import Tagged exposing (Tagged)
 import VoteEvent exposing (PersonId, VoteEvent)
 
 
@@ -29,8 +30,12 @@ type alias Vote =
     }
 
 
-type Id
-    = Id Int
+type alias Id =
+    Tagged IdTag Int
+
+
+type IdTag
+    = IdTag
 
 
 encode : Maybe PersonId -> Vote -> E.Value
@@ -75,12 +80,12 @@ withEventsDecoder =
 createDecoder : D.Decoder (WebData (List VoteEvent)) -> D.Decoder (Maybe Vote)
 createDecoder voteEventsDecoder =
     D.map7 createVote
-        (D.field "id" D.int |> D.map Id)
+        (D.field "id" D.int |> D.map Tagged.tag)
         (D.field "text" D.string)
         (D.field "actions_yes" D.string)
         (D.field "actions_no" D.string)
         (D.field "date" D.string)
-        (D.field "policyIds" (D.list (D.int |> D.map Policy.Id)))
+        (D.field "policyIds" (D.list (D.int |> D.map Policy.id)))
         voteEventsDecoder
 
 

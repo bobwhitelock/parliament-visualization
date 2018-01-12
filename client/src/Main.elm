@@ -17,6 +17,7 @@ import RemoteData exposing (RemoteData(..), WebData)
 import Select
 import Tachyons exposing (classes, tachyons)
 import Tachyons.Classes as TC exposing (..)
+import Tagged
 import View
 import View.Footer
 import View.Vote
@@ -435,11 +436,11 @@ cmdToGetEvents config vote =
 getEventsForVote : Config -> Vote.Id -> Cmd Msg
 getEventsForVote config voteId =
     let
-        (Vote.Id id) =
-            voteId
+        idString =
+            Tagged.untag voteId |> toString
 
         url =
-            config.apiUrl ++ "/vote-events/" ++ toString id
+            config.apiUrl ++ "/vote-events/" ++ idString
     in
     Http.get url (D.list VoteEvent.decoder)
         |> RemoteData.sendRequest
