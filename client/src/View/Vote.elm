@@ -22,35 +22,50 @@ navigationButtons showVoteMsg { previous, next } =
                 previous
                 FeatherIcons.chevronLeft
                 "earlier"
+                "earliest"
 
         nextVoteButton =
             voteNavigationButton
                 next
                 FeatherIcons.chevronRight
                 "later"
+                "latest"
 
         voteNavigationButton =
-            \maybeVote icon relationText ->
+            \maybeVote icon relationText endText ->
                 let
-                    titleText =
+                    voteNavigationButton_ =
+                        \attributes ->
+                            button
+                                (attributes ++ [ classes [ w_50, View.buttonColour ] ])
+                                [ icon ]
+
+                    activeTitleText =
                         String.join " "
                             [ "Show"
                             , relationText
                             , "vote"
                             ]
+
+                    disabledTitleText =
+                        String.join " "
+                            [ "Showing"
+                            , endText
+                            , "available vote"
+                            ]
                 in
                 case maybeVote of
                     Just { id } ->
-                        button
+                        voteNavigationButton_
                             [ onClick (showVoteMsg id)
-                            , classes [ w_50, View.buttonColour ]
-                            , title titleText
+                            , title activeTitleText
                             ]
-                            [ icon ]
 
                     Nothing ->
-                        -- XXX Just disable button in this case instead?
-                        span [] []
+                        voteNavigationButton_
+                            [ disabled True
+                            , title disabledTitleText
+                            ]
     in
     div [ classes [ mt1, mb3 ] ]
         [ previousVoteButton
