@@ -59,10 +59,22 @@ encode selectedPersonId event =
 
                 Nothing ->
                     E.null
+
+        isSelectedPerson =
+            .personId
+                >> Just
+                >> (==) selectedPersonId
+
+        radius =
+            if isSelectedPerson event then
+                13
+            else
+                10
     in
     E.object
         [ ( "personId", Tagged.untag event.personId |> E.int )
         , ( "name", E.string event.name )
+        , ( "radius", E.int radius )
         , ( "colour", personColour selectedPersonId event |> E.string )
         , ( "borderColour", borderColourValue )
         , ( "option", toString event.option |> String.toLower |> E.string )

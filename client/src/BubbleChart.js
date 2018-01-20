@@ -94,7 +94,7 @@ export default class BubbleChart {
 
       return {
         personId: d.personId,
-        radius: 10,
+        radius: d.radius,
         colour: d.colour,
         borderColour: d.borderColour,
         option: d.option,
