@@ -60,13 +60,8 @@ encode selectedPersonId event =
                 Nothing ->
                     E.null
 
-        isSelectedPerson =
-            .personId
-                >> Just
-                >> (==) selectedPersonId
-
         radius =
-            if isSelectedPerson event then
+            if isSelectedPerson selectedPersonId event then
                 13
             else
                 10
@@ -98,26 +93,28 @@ isSpeaker event =
             False
 
 
+isSelectedPerson : Maybe PersonId -> VoteEvent -> Bool
+isSelectedPerson selectedPersonId =
+    .personId
+        >> Just
+        >> (==) selectedPersonId
+
+
 personColour : Maybe PersonId -> VoteEvent -> String
 personColour selectedPersonId =
     rawPersonColour selectedPersonId >> Color.Convert.colorToHex
 
 
 rawPersonColour : Maybe PersonId -> VoteEvent -> Color
-rawPersonColour maybeSelectedPersonId event =
+rawPersonColour selectedPersonId event =
     let
         partyColour =
             rawPartyColour event
-
-        alterColourIfSelected =
-            \selectedPersonId ->
-                if event.personId == selectedPersonId then
-                    Color.Manipulate.lighten 0.1 partyColour
-                else
-                    partyColour
     in
-    Maybe.map alterColourIfSelected maybeSelectedPersonId
-        |> Maybe.withDefault partyColour
+    if isSelectedPerson selectedPersonId event then
+        Color.Manipulate.lighten 0.1 partyColour
+    else
+        partyColour
 
 
 personBorderColour : Maybe PersonId -> VoteEvent -> Maybe String
@@ -127,17 +124,11 @@ personBorderColour selectedPersonId voteEvent =
 
 
 rawPersonBorderColour : Maybe PersonId -> VoteEvent -> Maybe Color
-rawPersonBorderColour maybeSelectedPersonId event =
-    let
-        setBorderIfSelected =
-            \selectedPersonId ->
-                if event.personId == selectedPersonId then
-                    rawPartyComplementaryColour event |> Just
-                else
-                    Nothing
-    in
-    Maybe.map setBorderIfSelected maybeSelectedPersonId
-        |> Maybe.Extra.join
+rawPersonBorderColour selectedPersonId event =
+    if isSelectedPerson selectedPersonId event then
+        rawPartyComplementaryColour event |> Just
+    else
+        Nothing
 
 
 partyColour : VoteEvent -> String
