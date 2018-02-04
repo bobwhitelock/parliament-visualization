@@ -10,7 +10,6 @@ dokku apps:create parliament-api
 dokku plugin:install https://github.com/dokku/dokku-postgres.git
 dokku postgres:create parliament-database
 dokku postgres:link parliament-database parliament-api
-dokku config:set parliament-api TWFY_API_KEY=***
 
 # Local
 git remote add dokku dokku@li1514-40.members.linode.com:parliament-api
@@ -32,14 +31,17 @@ automatically?).
 
 ```bash
 # Remote
-dokku expose parliament-database
+dokku postgres:expose parliament-database
+
+dokku postgres:info parliament-database # To find the database password.
+netstat -tulpn # To find the currently exposed port for the database.
 
 # Local
 export DATABASE_URL=postgres://postgres:password@ip:port # Including server IP and port exposed above.
 bin/setup
 
 # Remote
-dokku unexpose parliament-database
+dokku postgres:unexpose parliament-database
 ```
 
 
