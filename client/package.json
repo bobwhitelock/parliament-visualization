@@ -8,6 +8,7 @@
     "d3": "^4.11.0"
   },
   "scripts": {
-    "build": "node_modules/create-elm-app/bin/elm-app-cli.js build"
+    "build": "node_modules/create-elm-app/bin/elm-app-cli.js build",
+    "start": "node_modules/create-elm-app/bin/elm-app-cli.js start"
   }
 }
