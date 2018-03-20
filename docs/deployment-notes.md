@@ -26,18 +26,17 @@ psql -U postgres
 
 # To setup database data
 
-Below runs setup script locally, could possibly have this run remotely (and
-automatically?).
+Below runs setup script locally to import data remotely, could possibly have
+this run remotely (and automatically?).
 
 ```bash
 # Remote
-dokku postgres:expose parliament-database
-
-dokku postgres:info parliament-database # To find the database password.
-netstat -tulpn # To find the currently exposed port for the database.
+dokku postgres:expose parliament-database # Temporarily expose database on server port.
+dokku postgres:info parliament-database # To find database password.
 
 # Local
-export DATABASE_URL=postgres://postgres:password@ip:port # Including server IP and port exposed above.
+export DATABASE_URL=postgres://postgres:password@ip:port # Including server IP, and password and port found above.
+export TWFY_API_KEY=XXX # TWFY API key created as described in README.
 bin/setup
 
 # Remote
