@@ -2,7 +2,7 @@
 # To setup server and database
 
 - Ubuntu 16.04 on Linode
-- Dokku 0.10.5
+- Dokku 0.19.13
 
 ```bash
 # Remote
