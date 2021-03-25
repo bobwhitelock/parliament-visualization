@@ -6,4 +6,4 @@
 
 [context.production]
   [context.production.environment]
-    ELM_APP_API_URL="http://139.162.229.40"
+    ELM_APP_API_URL="https://api.parliament.bobwhitelock.co.uk"

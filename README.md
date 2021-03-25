@@ -40,7 +40,7 @@ using the live version of the server, like this:
 cd client
 yarn install
 
-export ELM_APP_API_URL=http://li1514-40.members.linode.com
+export ELM_APP_API_URL=https://api.parliament.bobwhitelock.co.uk
 yarn run start
 ```
 
