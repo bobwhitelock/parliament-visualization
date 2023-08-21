@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 source "https://rubygems.org"
 
-ruby '2.4.1'
+ruby '3.1.2'
 
 gem 'http'
 gem 'nokogiri'
